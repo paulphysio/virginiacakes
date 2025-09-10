@@ -5,7 +5,7 @@ export default function AboutPage() {
         <h2 className="section-title">About Us</h2>
         <div className="card" style={{ padding: 20 }}>
           <p className="muted">
-            At Virginia's Cakes and Confectionery, every cake is a work of art—meticulously crafted with premium ingredients and refined techniques.
+            At Virginia&apos;s Cakes and Confectionery, every cake is a work of art—meticulously crafted with premium ingredients and refined techniques.
           </p>
         </div>
       </div>

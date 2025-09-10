@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 import { getCartWithItems } from "../../lib/cart";
 import { completeCheckout } from "../../lib/cart";
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const router = useRouter();
   const search = useSearchParams();
   const [user, setUser] = useState(null);
@@ -124,5 +124,13 @@ export default function CheckoutPage() {
         </div>
       </div>
     </section>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<section className="section"><div className="container"><p className="muted">Loading checkout...</p></div></section>}>
+      <CheckoutContent />
+    </Suspense>
   );
 }

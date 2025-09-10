@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
+import Link from "next/link";
 
 export default function Navbar() {
   const navRef = useRef(null);
@@ -57,11 +58,11 @@ export default function Navbar() {
           <img src="/logo.png" alt="Virginia's Cakes and Confectionery" className="logo" onClick={() => router.push("/")} style={{ cursor: "pointer" }} />
         </div>
         <nav className="nav-center">
-          <a href="/">Home</a>
-          <a href="/cakes">Cakes</a>
-          <a href="/custom-order">Custom Orders</a>
-          <a href="/about">About Us</a>
-          <a href="/contact">Contact</a>
+          <Link href="/">Home</Link>
+          <Link href="/cakes">Cakes</Link>
+          <Link href="/custom-order">Custom Orders</Link>
+          <Link href="/about">About Us</Link>
+          <Link href="/contact">Contact</Link>
         </nav>
         <div className="nav-right">
           <button className="icon-btn" aria-label="Cart" onClick={() => router.push("/cart")}>
@@ -78,8 +79,8 @@ export default function Navbar() {
               {userIcon()}
             </button>
             <div className={`profile-dropdown ${menuOpen ? "open" : ""}`} role="menu">
-              <a href="/profile" role="menuitem" className="dd-item">Profile</a>
-              <a href="/transactions" role="menuitem" className="dd-item">Transactions</a>
+              <Link href="/profile" role="menuitem" className="dd-item" onClick={() => setMenuOpen(false)}>Profile</Link>
+              <Link href="/transactions" role="menuitem" className="dd-item" onClick={() => setMenuOpen(false)}>Transactions</Link>
               <button
                 type="button"
                 role="menuitem"
@@ -106,11 +107,11 @@ export default function Navbar() {
       {/* Mobile Menu */}
       <div className={`mobile-menu-backdrop ${mobileOpen ? "show" : ""}`} onClick={() => setMobileOpen(false)} />
       <nav id="mobile-menu" className={`mobile-menu ${mobileOpen ? "open" : ""}`} aria-hidden={!mobileOpen}>
-        <a href="/" onClick={() => setMobileOpen(false)}>Home</a>
-        <a href="/cakes" onClick={() => setMobileOpen(false)}>Cakes</a>
-        <a href="/custom-order" onClick={() => setMobileOpen(false)}>Custom Orders</a>
-        <a href="/about" onClick={() => setMobileOpen(false)}>About Us</a>
-        <a href="/contact" onClick={() => setMobileOpen(false)}>Contact</a>
+        <Link href="/" onClick={() => setMobileOpen(false)}>Home</Link>
+        <Link href="/cakes" onClick={() => setMobileOpen(false)}>Cakes</Link>
+        <Link href="/custom-order" onClick={() => setMobileOpen(false)}>Custom Orders</Link>
+        <Link href="/about" onClick={() => setMobileOpen(false)}>About Us</Link>
+        <Link href="/contact" onClick={() => setMobileOpen(false)}>Contact</Link>
       </nav>
     </header>
     

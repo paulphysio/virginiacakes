@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 
-export default function ResetPage() {
+function ResetContent() {
   const search = useSearchParams();
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -91,5 +91,13 @@ export default function ResetPage() {
         </div>
       </div>
     </section>
+  );
+}
+
+export default function ResetPage() {
+  return (
+    <Suspense fallback={<section className="section"><div className="container" style={{ maxWidth: 520 }}><p className="muted">Loading...</p></div></section>}>
+      <ResetContent />
+    </Suspense>
   );
 }

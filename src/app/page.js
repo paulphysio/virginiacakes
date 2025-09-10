@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
 import { addItemByProductId } from "../lib/cart";
 
+export const dynamic = "force-dynamic";
+
 export default function Home() {
   const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [featured, setFeatured] = useState([]);
@@ -13,6 +15,28 @@ export default function Home() {
   const router = useRouter();
 
   // Navbar is globally rendered via RootLayout
+
+  // Testimonials data (constant)
+  const testimonials = [
+    {
+      quote:
+        "The most exquisite cake I've ever tasted. Presentation and flavor were flawless.",
+      name: "Charlotte R.",
+      rating: 5,
+    },
+    {
+      quote:
+        "Elegant design and delivered perfectly on time. Our guests were impressed.",
+      name: "Daniel A.",
+      rating: 5,
+    },
+    {
+      quote:
+        "Refined flavors, not overly sweet, just perfect. Will be ordering again.",
+      name: "Sophia L.",
+      rating: 5,
+    },
+  ];
 
   useEffect(() => {
     // Intersection Observer for fade/slide animations
@@ -36,7 +60,7 @@ export default function Home() {
       setActiveTestimonial((prev) => (prev + 1) % testimonials.length);
     }, 5000);
     return () => clearInterval(id);
-  }, []);
+  }, [testimonials.length]);
 
   useEffect(() => {
     // Load featured products (supports snake_case is_show and camelCase isShow)
@@ -132,26 +156,7 @@ export default function Home() {
     }
   }
 
-  const testimonials = [
-    {
-      quote:
-        "The most exquisite cake I've ever tasted. Presentation and flavor were flawless.",
-      name: "Charlotte R.",
-      rating: 5,
-    },
-    {
-      quote:
-        "Elegant design and delivered perfectly on time. Our guests were impressed.",
-      name: "Daniel A.",
-      rating: 5,
-    },
-    {
-      quote:
-        "Refined flavors, not overly sweet, just perfect. Will be ordering again.",
-      name: "Sophia L.",
-      rating: 5,
-    },
-  ];
+  
 
   return (
     <div className="luxe-page">
@@ -330,7 +335,7 @@ export default function Home() {
           </div>
         </div>
         <div className="container copyright">
-          <span>&copy; {new Date().getFullYear()} Virginia's Cakes and Confectionery. All rights reserved.</span>
+          <span>&copy; {new Date().getFullYear()} Virginia&apos;s Cakes and Confectionery. All rights reserved.</span>
         </div>
       </footer>
     </div>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabaseClient";
+import Link from "next/link";
 
 export default function CustomOrderDetailPage() {
   const { id } = useParams();
@@ -53,7 +54,7 @@ export default function CustomOrderDetailPage() {
       <h2 className="section-title" style={{ marginTop: 0 }}>Custom Order</h2>
       <div style={{ color: "#b00020" }}>{error || "Order not found"}</div>
       <div style={{ marginTop: 10 }}>
-        <a href="/custom-order" className="btn btn-gold">Back to Custom Orders</a>
+        <Link href="/custom-order" className="btn btn-gold">Back to Custom Orders</Link>
       </div>
     </div></div></section>
   );

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 
-export default function LoginPage() {
+function LoginContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -68,7 +68,7 @@ export default function LoginPage() {
           <aside className="brand-panel">
             <div className="brand-inner">
               <img src="/logo.png" alt="Virginia's Cakes and Confectionery" className="brand-logo" />
-              <h1 className="brand-title">Virginia's Cakes and Confectionery</h1>
+              <h1 className="brand-title">Virginia&apos;s Cakes and Confectionery</h1>
               <p className="brand-tag">Luxury cakes, handcrafted with elegance.</p>
             </div>
           </aside>
@@ -284,5 +284,13 @@ export default function LoginPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="container" style={{ padding: 20 }}><p className="muted">Loading...</p></div>}>
+      <LoginContent />
+    </Suspense>
   );
 }
