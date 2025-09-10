@@ -106,12 +106,19 @@ export default function Navbar() {
       </div>
       {/* Mobile Menu */}
       <div className={`mobile-menu-backdrop ${mobileOpen ? "show" : ""}`} onClick={() => setMobileOpen(false)} />
-      <nav id="mobile-menu" className={`mobile-menu ${mobileOpen ? "open" : ""}`} aria-hidden={!mobileOpen}>
-        <Link href="/" onClick={() => setMobileOpen(false)}>Home</Link>
-        <Link href="/cakes" onClick={() => setMobileOpen(false)}>Cakes</Link>
-        <Link href="/custom-order" onClick={() => setMobileOpen(false)}>Custom Orders</Link>
-        <Link href="/about" onClick={() => setMobileOpen(false)}>About Us</Link>
-        <Link href="/contact" onClick={() => setMobileOpen(false)}>Contact</Link>
+      <nav id="mobile-menu" className={`mobile-menu ${mobileOpen ? "open" : ""}`} aria-hidden={!mobileOpen} aria-label="Mobile navigation">
+        <div className="mobile-menu-header">
+          <img src="/logo.png" alt="Virginia's Cakes and Confectionery" className="logo" onClick={() => { setMobileOpen(false); router.push("/"); }} />
+          <button className="mobile-close" aria-label="Close menu" onClick={() => setMobileOpen(false)}>&times;</button>
+        </div>
+        <div className="mobile-menu-links">
+          <Link className="mobile-link" href="/" onClick={() => setMobileOpen(false)}>Home</Link>
+          <Link className="mobile-link" href="/cakes" onClick={() => setMobileOpen(false)}>Cakes</Link>
+          <Link className="mobile-link" href="/custom-order" onClick={() => setMobileOpen(false)}>Custom Orders</Link>
+          <Link className="mobile-link" href="/about" onClick={() => setMobileOpen(false)}>About Us</Link>
+          <Link className="mobile-link" href="/contact" onClick={() => setMobileOpen(false)}>Contact</Link>
+        </div>
+        {/* Footer CTA removed for a cleaner, non-scroll layout */}
       </nav>
     </header>
     
