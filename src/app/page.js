@@ -1,11 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
 import { addItemByProductId } from "../lib/cart";
 
 export const dynamic = "force-dynamic";
+
+// Currency formatter available to all components in this module
+function formatNaira(amount) {
+  try {
+    return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(amount || 0);
+  } catch {
+    return `₦${amount?.toLocaleString?.() ?? amount ?? 0}`;
+  }
+}
 
 export default function Home() {
   const [activeTestimonial, setActiveTestimonial] = useState(0);
@@ -132,13 +142,7 @@ export default function Home() {
     })();
   }, []);
 
-  function formatNaira(amount) {
-    try {
-      return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(amount || 0);
-    } catch {
-      return `₦${amount?.toLocaleString?.() ?? amount ?? 0}`;
-    }
-  }
+  
 
   async function handleOrder(product) {
     const {
@@ -164,12 +168,18 @@ export default function Home() {
       <section id="home" className="hero">
         <div className="container hero-grid">
           <div className="hero-text reveal slide-up">
-            <h1>Indulge in Luxury Cakes</h1>
-            <p>Handcrafted, elegant, and delivered fresh.</p>
+            <div className="badge">Since 2010 • Award‑Winning Pâtisserie</div>
+            <h1 className="gradient-text">Indulge in Luxury Cakes</h1>
+            <p>Handcrafted with premium ingredients and refined artistry. Delivered fresh, right on time.</p>
             <div className="hero-ctas">
-              <a href="#cakes" className="btn btn-gold">Order Now</a>
-              <a href="#menu" className="btn btn-outline">Explore Menu</a>
+              <a href="#cakes" className="btn btn-gold" aria-label="Order cakes now">Order Now</a>
+              <a href="#custom" className="btn btn-outline" aria-label="Explore custom cake options">Custom Orders</a>
             </div>
+            <ul className="trust">
+              <li>Trusted by 5k+ celebrants</li>
+              <li>Freshly baked daily</li>
+              <li>Secure checkout</li>
+            </ul>
           </div>
           <div className="hero-media reveal fade-in">
             <div className="hero-image-frame">
@@ -179,24 +189,27 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured Cakes */}
-      <section id="cakes" className="section">
+      {/* Signature Creations (Rebuilt) */}
+      <section id="cakes" className="section signature">
         <div className="container">
-          <div className="section-head">
+          <div className="signature-head reveal slide-up">
             <h2 className="section-title">Our Signature Creations</h2>
-            <p className="muted">Explore customer favorites crafted to perfection.</p>
+            <p className="muted">Elevated favorites, perfected by our pâtissiers.</p>
           </div>
-          <div className="card-grid">
-            {featuredLoading ? (
-              <div className="card reveal fade-in" style={{ gridColumn: "1 / -1" }}>
-                <div className="card-body">
-                  <h3>Loading cakes...</h3>
-                  <p className="muted">Please wait a moment.</p>
+          {featuredLoading ? (
+            <div className="sig-grid">
+              <div className="sig-card skeleton" style={{ gridColumn: "1 / -1" }}>
+                <div className="skeleton-media" />
+                <div className="skeleton-lines">
+                  <div />
+                  <div />
                 </div>
               </div>
-            ) : featured.length === 0 ? (
-              <div className="card reveal fade-in" style={{ gridColumn: "1 / -1" }}>
-                <div className="card-body">
+            </div>
+          ) : featured.length === 0 ? (
+            <div className="sig-grid">
+              <div className="sig-card" style={{ gridColumn: "1 / -1", textAlign: "center" }}>
+                <div className="sig-body">
                   <h3>No featured cakes yet</h3>
                   <p className="muted">
                     {featuredError
@@ -205,28 +218,19 @@ export default function Home() {
                   </p>
                 </div>
               </div>
-            ) : featured.map((p) => (
-              <div key={p.id} className="card">
-                <div className="card-media">
-                  <img src={p.image_url || "/chocolate_cake.jpg"} alt={p.name} />
-                </div>
-                <div className="card-body">
-                  <h3>{p.name}</h3>
-                  <p>{p.description}</p>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                    <div style={{ fontWeight: 700 }}>{formatNaira(p.price_naira)}</div>
-                    <div className="muted" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span>{"★".repeat(Math.round(p.rating || 0))}{"☆".repeat(5 - Math.round(p.rating || 0))}</span>
-                      <span style={{ fontSize: 12 }}>{(p.views || 0).toLocaleString()} views</span>
-                    </div>
-                  </div>
-                  <button type="button" className="btn btn-gold btn-sm" onClick={() => handleOrder(p)}>
-                    Order Now
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <div className="sig-grid">
+              {/* Highlight primary card */}
+              {featured[0] && (
+                <SignatureCard key={featured[0].id} product={featured[0]} variant="lg" onOrder={handleOrder} />
+              )}
+              {/* Supporting cards */}
+              {featured.slice(1, 8).map((p) => (
+                <SignatureCard key={p.id} product={p} onOrder={handleOrder} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -234,7 +238,7 @@ export default function Home() {
       <section id="custom" className="section custom">
         <div className="container custom-grid">
           <div className="custom-title reveal slide-up">
-            <h2>Your Imagination, Our Creation</h2>
+            <h2 className="section-title">Your Imagination, Our Creation</h2>
           </div>
           <div className="custom-media reveal fade-in">
             <div className="image-frame">
@@ -243,11 +247,41 @@ export default function Home() {
           </div>
           <div className="custom-copy reveal slide-up">
             <p>
-              From intimate celebrations to grand occasions, our master pastry chefs
-              collaborate with you to craft bespoke cakes that reflect your vision.
-              Choose flavors, finishes, and artistry tailored to your event.
+              From intimate celebrations to grand occasions, our maîtres pâtissiers craft one‑of‑a‑kind cakes that tell your story — flavors balanced to perfection and finishes tailored to your theme.
             </p>
-            <a className="btn btn-gold" href="#custom-form">Start Your Custom Order</a>
+            <ul className="assurances">
+              <li>Design mockups and expert guidance</li>
+              <li>Premium ingredients; never overly sweet</li>
+              <li>Careful delivery and onsite setup</li>
+            </ul>
+            <ol className="process">
+              <li>
+                <div className="num">1</div>
+                <div>
+                  <h4>Consult</h4>
+                  <p>Share your vision, colors, servings, and date. We’ll align on style and budget.</p>
+                </div>
+              </li>
+              <li>
+                <div className="num">2</div>
+                <div>
+                  <h4>Design</h4>
+                  <p>Receive a visual concept and flavor pairing recommendations from our team.</p>
+                </div>
+              </li>
+              <li>
+                <div className="num">3</div>
+                <div>
+                  <h4>Create & Deliver</h4>
+                  <p>Baked fresh, finished with precision, and delivered on schedule.</p>
+                </div>
+              </li>
+            </ol>
+            <div className="custom-ctas">
+              <Link className="btn btn-gold" href="/custom-order">Start Your Custom Order</Link>
+              <Link className="btn btn-outline" href="/contact">Talk to a Specialist</Link>
+            </div>
+            <p className="micro muted">Average lead time: 5–7 days • Rush available</p>
           </div>
         </div>
       </section>
@@ -338,6 +372,12 @@ export default function Home() {
           <span>&copy; {new Date().getFullYear()} Virginia&apos;s Cakes and Confectionery. All rights reserved.</span>
         </div>
       </footer>
+
+      {/* Mobile Sticky CTA */}
+      <div className="mobile-cta" aria-hidden="true">
+        <a href="#cakes" className="btn btn-gold btn-sm">Order Now</a>
+        <a href="#custom" className="btn btn-outline btn-sm">Custom Cake</a>
+      </div>
     </div>
   );
 }
@@ -349,6 +389,51 @@ function Feature({ icon, title, text }) {
       <h3>{title}</h3>
       <p>{text}</p>
     </div>
+  );
+}
+
+function ratingStars(rating = 0) {
+  const full = Math.round(rating);
+  const empty = 5 - full;
+  return `${"★".repeat(full)}${"☆".repeat(empty)}`;
+}
+
+function SignatureCard({ product, variant = "sm", onOrder }) {
+  const price = product?.price_naira;
+  const img = product?.image_url || "/chocolate_cake.jpg";
+  return (
+    <article className={`sig-card ${variant === "lg" ? "lg" : ""}`}> 
+      <div className="sig-media">
+        <img
+          src={img}
+          alt={product?.name}
+          loading="lazy"
+          decoding="async"
+          sizes="(max-width: 720px) 80vw, (max-width: 1100px) 40vw, 520px"
+        />
+        <div className="sig-gradient" aria-hidden="true" />
+        <span className="price-pill">{price != null ? formatNaira(price) : ""}</span>
+        <button
+          type="button"
+          className="btn btn-gold btn-sm order-on-media"
+          onClick={() => onOrder?.(product)}
+          aria-label={`Order ${product?.name}`}
+        >
+          Order
+        </button>
+      </div>
+      <div className="sig-body">
+        <h3 className="sig-title">{product?.name}</h3>
+        <p className="sig-desc">{product?.description}</p>
+        <div className="sig-meta">
+          <span className="sig-rating">{ratingStars(product?.rating || 0)}</span>
+          <span className="sig-views muted">{(product?.views || 0).toLocaleString()} views</span>
+        </div>
+        <div className="sig-actions">
+          <button type="button" className="btn btn-outline btn-sm" onClick={() => onOrder?.(product)}>Order Now</button>
+        </div>
+      </div>
+    </article>
   );
 }
 
