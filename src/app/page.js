@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
@@ -77,6 +77,64 @@ export default function Home() {
   ];
   const [cats, setCats] = useState(FALLBACK_CATS);
   const [catsLoading, setCatsLoading] = useState(true);
+  const DISPLAY_ORDER = useMemo(() => [
+    "foil-cake",
+    "bento",
+    "cupcakes",
+    "banana-bread",
+    "food-tray",
+  ], []);
+  const NAME_MAP = useMemo(() => ({
+    "foil-cake": "Foil Cake",
+    "bento": "Bento",
+    "cupcakes": "Cupcakes",
+    "banana-bread": "Banana Bread",
+    "food-tray": "Food Tray",
+    "waffle": "Waffle",
+  }), []);
+  // Simple category list for Shop by Category section
+  const displayCats = useMemo(() => (
+    DISPLAY_ORDER.map((slug) => ({
+      slug,
+      name: NAME_MAP[slug] || slug,
+      image_url: CATEGORY_IMAGE_OVERRIDES[slug] || "/hero_cake.jpg",
+    }))
+  ), [DISPLAY_ORDER, NAME_MAP, CATEGORY_IMAGE_OVERRIDES]);
+
+  // Carousel functionality
+  const carouselRef = useRef(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+
+  // Auto-scroll every 2 seconds
+  useEffect(() => {
+    if (!isAutoPlaying) return;
+    
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => {
+        const nextIndex = (prev + 1) % displayCats.length;
+        return nextIndex;
+      });
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [isAutoPlaying, displayCats.length]);
+
+  // Handle manual navigation
+  const goToSlide = (index) => {
+    setCurrentIndex(index);
+    setIsAutoPlaying(false);
+    // Resume autoplay after 5 seconds
+    setTimeout(() => setIsAutoPlaying(true), 5000);
+  };
+
+  const nextSlide = () => {
+    goToSlide((currentIndex + 1) % displayCats.length);
+  };
+
+  const prevSlide = () => {
+    goToSlide(currentIndex === 0 ? displayCats.length - 1 : currentIndex - 1);
+  };
   useEffect(() => {
     (async () => {
       const { data, error } = await supabase
@@ -97,6 +155,7 @@ export default function Home() {
       setCatsLoading(false);
     })();
   }, [CATEGORY_IMAGE_OVERRIDES]);
+
 
   useEffect(() => {
     // Intersection Observer for fade/slide animations
@@ -223,7 +282,7 @@ export default function Home() {
             <p>Handcrafted with premium ingredients and refined artistry. Delivered fresh, right on time.</p>
             <div className="hero-ctas">
               <a href="#cakes" className="btn btn-gold" aria-label="Order cakes now">Order Now</a>
-              <a href="#custom" className="btn btn-outline" aria-label="Explore custom cake options">Custom Orders</a>
+              <Link href="/custom-order" className="btn btn-outline" aria-label="Explore custom cake options">Custom Orders</Link>
             </div>
             <ul className="trust">
               <li>Trusted by 5k+ celebrants</li>
@@ -254,17 +313,48 @@ export default function Home() {
               </div>
             </div>
           ) : (
-            <div className="card-grid">
-              {cats.map((c) => (
-                <Link key={c.slug} href={`/categories/${c.slug}`} className="card">
-                  <div className="card-media"><img src={c.image_url || "/hero_cake.jpg"} alt={c.name} /></div>
-                  <div className="card-body">
-                    <h3>{c.name}</h3>
-                    <p>Discover our {c.name.toLowerCase()} selection.</p>
-                    <span className="btn btn-outline btn-sm">Explore</span>
-                  </div>
-                </Link>
-              ))}
+            <div className="carousel-container">
+              <div className="carousel-wrapper" ref={carouselRef}>
+                <div 
+                  className="carousel-track" 
+                  style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+                >
+                  {displayCats.map((c, index) => (
+                    <div key={c.slug} className="carousel-slide">
+                      <Link href={`/categories/${c.slug}`} className="card">
+                        <div className="card-media">
+                          <img src={c.image_url || "/hero_cake.jpg"} alt={c.name} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "/hero_cake.jpg"; }} />
+                        </div>
+                        <div className="card-body">
+                          <h3>{c.name}</h3>
+                          <p>Discover our {c.name.toLowerCase()} selection.</p>
+                          <span className="btn btn-outline btn-sm">Explore</span>
+                        </div>
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Navigation buttons */}
+              <button className="carousel-btn carousel-btn-prev" onClick={prevSlide} aria-label="Previous category">
+                ‹
+              </button>
+              <button className="carousel-btn carousel-btn-next" onClick={nextSlide} aria-label="Next category">
+                ›
+              </button>
+              
+              {/* Dots indicator */}
+              <div className="carousel-dots">
+                {displayCats.map((_, index) => (
+                  <button
+                    key={index}
+                    className={`carousel-dot ${index === currentIndex ? 'active' : ''}`}
+                    onClick={() => goToSlide(index)}
+                    aria-label={`Go to slide ${index + 1}`}
+                  />
+                ))}
+              </div>
             </div>
           )}
           <div style={{ textAlign: "center", marginTop: 16 }}>
@@ -431,7 +521,7 @@ export default function Home() {
               <li><a href="#home">Home</a></li>
               <li><a href="#cakes">Cakes</a></li>
               <li><Link href="/categories">Categories</Link></li>
-              <li><a href="#custom">Custom Orders</a></li>
+              <li><Link href="/custom-order">Custom Orders</Link></li>
               <li><a href="#about">About Us</a></li>
               <li><a href="#contact">Contact</a></li>
             </ul>
@@ -461,7 +551,7 @@ export default function Home() {
       {/* Mobile Sticky CTA */}
       <div className="mobile-cta" aria-hidden="true">
         <a href="#cakes" className="btn btn-gold btn-sm">Order Now</a>
-        <a href="#custom" className="btn btn-outline btn-sm">Custom Cake</a>
+        <Link href="/custom-order" className="btn btn-outline btn-sm">Custom Cake</Link>
       </div>
     </div>
   );
