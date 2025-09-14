@@ -17,9 +17,9 @@ const openSans = Open_Sans({
 });
 
 export const metadata = {
-  title: "Virginia's Cakes and Confectionery — Luxury Cakes",
+  title: "Virginia's Cakes & Confectionery — Luxury Treats",
   description:
-    "Virginia's Cakes and Confectionery: Handcrafted luxury cakes with elegant designs, premium taste, and fast delivery.",
+    "Virginia's Cakes & Confectionery: Luxury cakes, cupcakes, banana bread, small chops, waffles, food trays and more — handcrafted with elegance and delivered fresh.",
 };
 
 export default function RootLayout({ children }) {

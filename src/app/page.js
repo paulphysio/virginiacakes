@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
@@ -47,6 +47,56 @@ export default function Home() {
       rating: 5,
     },
   ];
+
+  // Categories Spotlight: dynamic from DB with graceful fallback
+  // Override category card images (except for custom-cake) with Supabase Storage files
+  const STORAGE_BASE = "https://fbjnqxtwwkoxxogtqfzv.supabase.co/storage/v1/object/public/product-images";
+  const CATEGORY_IMAGE_OVERRIDES = useMemo(() => ({
+    // Do NOT override custom-cake per requirement
+    "foil-cake": `${STORAGE_BASE}/foil-cakes.jfif`,
+    "cupcakes": `${STORAGE_BASE}/cupcake2.jfif`,
+    "bento": `${STORAGE_BASE}/bento1.jfif`,
+    "cakelets": `${STORAGE_BASE}/cakelets-collection.jfif`,
+    "banana-bread": `${STORAGE_BASE}/banana-bread-collections2.jfif`,
+    "food-tray": `${STORAGE_BASE}/food-tray-collection.jfif`,
+    // Snack tray maps to small-chops
+    "small-chops": `${STORAGE_BASE}/snack-tray.jfif`,
+    "waffle": `${STORAGE_BASE}/waffles-collections.jfif`,
+  }), []);
+
+  const FALLBACK_CATS = [
+    { slug: "custom-cake", name: "Custom Cake", image_url: "/custom_cake.jpg" },
+    { slug: "foil-cake", name: "Foil Cake", image_url: CATEGORY_IMAGE_OVERRIDES["foil-cake"] || "/redvelvet.jpg" },
+    { slug: "cupcakes", name: "Cupcakes", image_url: CATEGORY_IMAGE_OVERRIDES["cupcakes"] || "/cupcakes.jpg" },
+    { slug: "bento", name: "Bento", image_url: CATEGORY_IMAGE_OVERRIDES["bento"] || "/hero_cake.jpg" },
+    { slug: "cakelets", name: "Cakelets", image_url: CATEGORY_IMAGE_OVERRIDES["cakelets"] || "/chocolate_cake.jpg" },
+    { slug: "banana-bread", name: "Banana Bread", image_url: CATEGORY_IMAGE_OVERRIDES["banana-bread"] || "/chocolate_cake.jpg" },
+    { slug: "food-tray", name: "Food Tray", image_url: CATEGORY_IMAGE_OVERRIDES["food-tray"] || "/wedding_cake.jpg" },
+    { slug: "small-chops", name: "Small Chops", image_url: CATEGORY_IMAGE_OVERRIDES["small-chops"] || "/cupcakes.jpg" },
+    { slug: "waffle", name: "Waffle", image_url: CATEGORY_IMAGE_OVERRIDES["waffle"] || "/hero_cake.jpg" },
+  ];
+  const [cats, setCats] = useState(FALLBACK_CATS);
+  const [catsLoading, setCatsLoading] = useState(true);
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("slug, name, image_url, position")
+        .order("position", { ascending: true });
+      if (!error && data && data.length) {
+        // Apply image overrides by slug, but keep custom-cake as-is
+        const mapped = data.map((c) => ({
+          ...c,
+          image_url:
+            c.slug === "custom-cake"
+              ? c.image_url || "/custom_cake.jpg"
+              : CATEGORY_IMAGE_OVERRIDES[c.slug] || c.image_url,
+        }));
+        setCats(mapped);
+      }
+      setCatsLoading(false);
+    })();
+  }, [CATEGORY_IMAGE_OVERRIDES]);
 
   useEffect(() => {
     // Intersection Observer for fade/slide animations
@@ -169,7 +219,7 @@ export default function Home() {
         <div className="container hero-grid">
           <div className="hero-text reveal slide-up">
             <div className="badge">Since 2010 • Award‑Winning Pâtisserie</div>
-            <h1 className="gradient-text">Indulge in Luxury Cakes</h1>
+            <h1 className="gradient-text">Virginia Cakes & Confectionery</h1>
             <p>Handcrafted with premium ingredients and refined artistry. Delivered fresh, right on time.</p>
             <div className="hero-ctas">
               <a href="#cakes" className="btn btn-gold" aria-label="Order cakes now">Order Now</a>
@@ -185,6 +235,40 @@ export default function Home() {
             <div className="hero-image-frame">
               <img src="/hero_cake.jpg" alt="Featured luxury cake" className="hero-image" />
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Categories Spotlight */}
+      <section className="section categories-spotlight">
+        <div className="container">
+          <h2 className="section-title">Shop by Category</h2>
+          <p className="muted" style={{ textAlign: "center", marginBottom: 20 }}>
+            Explore our full range of indulgent treats beyond cakes.
+          </p>
+          {catsLoading ? (
+            <div className="card-grid">
+              <div className="card skeleton" style={{ gridColumn: "1 / -1" }}>
+                <div className="skeleton-media" />
+                <div className="skeleton-lines"><div /><div /></div>
+              </div>
+            </div>
+          ) : (
+            <div className="card-grid">
+              {cats.map((c) => (
+                <Link key={c.slug} href={`/categories/${c.slug}`} className="card">
+                  <div className="card-media"><img src={c.image_url || "/hero_cake.jpg"} alt={c.name} /></div>
+                  <div className="card-body">
+                    <h3>{c.name}</h3>
+                    <p>Discover our {c.name.toLowerCase()} selection.</p>
+                    <span className="btn btn-outline btn-sm">Explore</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+          <div style={{ textAlign: "center", marginTop: 16 }}>
+            <Link className="btn btn-gold" href="/categories">View all categories</Link>
           </div>
         </div>
       </section>
@@ -339,13 +423,14 @@ export default function Home() {
         <div className="container footer-grid">
           <div>
             <img src="/logo.png" alt="Virginia's Cakes and Confectionery" className="logo footer-logo" />
-            <p className="muted">Luxury cakes, handcrafted with elegance.</p>
+            <p className="muted">Handcrafted cakes and confectionery with elegance.</p>
           </div>
           <div>
             <h4>Quick Links</h4>
             <ul>
               <li><a href="#home">Home</a></li>
               <li><a href="#cakes">Cakes</a></li>
+              <li><Link href="/categories">Categories</Link></li>
               <li><a href="#custom">Custom Orders</a></li>
               <li><a href="#about">About Us</a></li>
               <li><a href="#contact">Contact</a></li>
@@ -355,21 +440,21 @@ export default function Home() {
             <h4>Contact</h4>
             <ul className="muted">
               <li>123 Premier Avenue, City, Country</li>
-              <li>+1 (555) 123-4567</li>
-              <li>hello@luxebakery.com</li>
+              <li>+234 708 345 3202</li>
+              <li>support@virginiascakes.com</li>
             </ul>
           </div>
           <div>
             <h4>Follow</h4>
             <div className="socials">
-              <a href="#" aria-label="Facebook" className="icon-link">{facebookIcon()}</a>
-              <a href="#" aria-label="Instagram" className="icon-link">{instagramIcon()}</a>
-              <a href="#" aria-label="Twitter" className="icon-link">{twitterIcon()}</a>
+              <a href="https://www.instagram.com/virginiascakesandconfectionery?igsh=YWRoY2hsMG1zcmZ1" target="_blank" rel="noopener noreferrer" aria-label="Instagram: virginiascakesandconfectionery" className="icon-link">{instagramIcon()}</a>
+              <a href="https://www.instagram.com/cakegospel?igsh=MWtpZXBjMTVuaHJrZQ==" target="_blank" rel="noopener noreferrer" aria-label="Instagram: cakegospel" className="icon-link">{instagramIcon()}</a>
+              <a href="https://www.tiktok.com/@virginiascakescon?_t=ZS-8ziyyg9eYpV&_r=1" target="_blank" rel="noopener noreferrer" aria-label="TikTok: virginiascakescon" className="icon-link">{tiktokIcon()}</a>
             </div>
           </div>
         </div>
         <div className="container copyright">
-          <span>&copy; {new Date().getFullYear()} Virginia&apos;s Cakes and Confectionery. All rights reserved.</span>
+          <span>&copy; {new Date().getFullYear()} Virginia Cakes &amp; Confectionery. All rights reserved.</span>
         </div>
       </footer>
 
@@ -524,6 +609,14 @@ function twitterIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M20 7.3c-.6.3-1.2.5-1.9.6.7-.4 1.2-1 1.5-1.8-.6.4-1.4.7-2.1.8-.6-.6-1.5-1-2.4-1-1.9 0-3.4 1.5-3.4 3.4 0 .3 0 .6.1.9-2.8-.1-5.3-1.5-7-3.6-.3.5-.5 1-.5 1.7 0 1.2.6 2.2 1.5 2.8-.6 0-1.1-.2-1.6-.4 0 0 0 .1 0 .1 0 1.6 1.1 2.9 2.6 3.2-.3.1-.6.1-.9.1-.2 0-.4 0-.6-.1.4 1.3 1.7 2.2 3.2 2.2-1.2.9-2.7 1.4-4.3 1.4H4c1.6 1 3.6 1.6 5.6 1.6 6.7 0 10.4-5.6 10.4-10.4v-.5c.7-.4 1.3-1 2-1.7-.7.3-1.4.5-2 .6z" fill="#ffffff"/>
+    </svg>
+  );
+}
+
+function tiktokIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M14.5 3v3.2c0 2.9 2.4 5.3 5.3 5.3h.7v3.1c-1.9-.1-3.7-.8-5.2-1.9v4.9c0 3-2.4 5.4-5.4 5.4S4.5 20.6 4.5 17.6s2.4-5.4 5.4-5.4c.5 0 1 .1 1.5.2v3.2c-.4-.2-.9-.3-1.5-.3-1.7 0-3.1 1.4-3.1 3.1S8.2 21.5 9.9 21.5s3.1-1.4 3.1-3.1V3h1.5z" fill="#ffffff"/>
     </svg>
   );
 }

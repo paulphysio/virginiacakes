@@ -60,6 +60,7 @@ export default function Navbar() {
         <nav className="nav-center">
           <Link href="/">Home</Link>
           <Link href="/cakes">Cakes</Link>
+          <Link href="/categories">Categories</Link>
           <Link href="/custom-order">Custom Orders</Link>
           <Link href="/about">About Us</Link>
           <Link href="/contact">Contact</Link>
@@ -114,6 +115,7 @@ export default function Navbar() {
         <div className="mobile-menu-links">
           <Link className="mobile-link" href="/" onClick={() => setMobileOpen(false)}>Home</Link>
           <Link className="mobile-link" href="/cakes" onClick={() => setMobileOpen(false)}>Cakes</Link>
+          <Link className="mobile-link" href="/categories" onClick={() => setMobileOpen(false)}>Categories</Link>
           <Link className="mobile-link" href="/custom-order" onClick={() => setMobileOpen(false)}>Custom Orders</Link>
           <Link className="mobile-link" href="/about" onClick={() => setMobileOpen(false)}>About Us</Link>
           <Link className="mobile-link" href="/contact" onClick={() => setMobileOpen(false)}>Contact</Link>
