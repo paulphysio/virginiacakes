@@ -2044,6 +2044,9 @@ p {
     /* Smaller logo and navbar height */
     .logo { height: 32px; }
     .nav-inner { min-height: 56px; }
+    /* Collapse center nav on mobile and show hamburger */
+    .nav-center { display: none; }
+    .hamburger { display: inline-flex; }
 
     /* Typography tightening on mobile */
     h1 { font-size: clamp(1.75rem, 7vw, 2.25rem); }

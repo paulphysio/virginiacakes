@@ -1,11 +1,24 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
 import { addItemByProductId } from "../lib/cart";
 
+const MobileCTA = () => {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted || typeof document === 'undefined') return null;
+  return createPortal(
+    <div className="mobile-cta" aria-hidden="true">
+      <a href="#cakes" className="btn btn-primary">Order Now</a>
+      <Link href="/custom-order" className="btn btn-outline">Custom Cake</Link>
+    </div>,
+    document.body
+  );
+};
 export const dynamic = "force-dynamic";
 
 // Currency formatter available to all components in this module
@@ -709,11 +722,8 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Mobile Sticky CTA */}
-      <div className="mobile-cta" aria-hidden="true">
-        <a href="#cakes" className="btn btn-primary">Order Now</a>
-        <Link href="/custom-order" className="btn btn-outline">Custom Cake</Link>
-      </div>
+      {/* Mobile Sticky CTA (rendered via portal to avoid layout/scroll quirks) */}
+      <MobileCTA />
     </div>
   );
 }
