@@ -1999,11 +1999,21 @@ p {
   }
 }
 
-/* Mobile */
-@media (max-width: 768px) {
-  .container {
-    padding: 0 var(--space-lg);
+  /* Mobile */
+  @media (max-width: 768px) {
+  /* Global scale down: base font size and spacing */
+  html { font-size: 14px; }
+  :root {
+    --space-sm: 6px;
+    --space-md: 12px;
+    --space-lg: 16px;
+    --space-xl: 24px;
+    --space-2xl: 36px;
+    --space-3xl: 48px;
   }
+    .container {
+      padding: 0 var(--space-lg);
+    }
   
   /* Signature section mobile header */
   .signature-head {
@@ -2011,103 +2021,52 @@ p {
     margin-bottom: var(--space-xl);
   }
   
-  .signature-head .section-title {
-    font-size: clamp(1.75rem, 5vw, 2.25rem);
-    margin-bottom: var(--space-md);
-  }
-  
-  .signature-head p {
-    font-size: var(--text-base);
-    line-height: 1.6;
-  }
-  
-  /* iOS-style carousel wrapper */
-  .signature-creations {
-    position: relative;
-  }
-  
-  .signature-creations::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: var(--space-lg);
-    background: linear-gradient(to right, var(--background), transparent);
-    pointer-events: none;
-    z-index: 2;
-  }
-  
-  .signature-creations::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    width: var(--space-lg);
-    background: linear-gradient(to left, var(--background), transparent);
-    pointer-events: none;
-    z-index: 2;
-  }
-  
-  .section {
-    padding: var(--space-2xl) 0;
-  }
-  
-  .section-compact {
-    padding: var(--space-xl) 0;
-  }
-  
-  .nav-center { 
-    display: none; 
-  }
-  
-  .hamburger { 
-    display: inline-flex; 
-    align-items: center; 
-    justify-content: center; 
-  }
-  
-  .hero {
-    min-height: 60vh;
-  }
-  
   .hero-grid {
     padding: var(--space-2xl) 0;
     gap: var(--space-xl);
   }
-  
-  .hero-text p {
-    max-width: 100%;
-  }
+    .hero-text p {
+      max-width: 100%;
+      font-size: 0.95rem;
+    }
   
   .hero-ctas {
     justify-content: center;
   }
   
-  .custom-grid { 
-    grid-template-columns: 1fr;
-    grid-template-areas: 
-      "title"
-      "media"
-      "copy";
-    gap: var(--space-xl);
-  }
-  
-  .image-frame { 
-    max-width: 100%; 
-    margin: 0 auto;
-    transform: none;
-  }
   
   .image-frame:hover {
     transform: scale(1.02);
   }
-  
-  .mobile-cta { 
-    display: flex; 
+    .mobile-cta { 
+      display: flex; 
+    }
+    /* Smaller logo and navbar height */
+    .logo { height: 32px; }
+    .nav-inner { min-height: 56px; }
+
+    /* Typography tightening on mobile */
+    h1 { font-size: clamp(1.75rem, 7vw, 2.25rem); }
+    h2 { font-size: clamp(1.375rem, 5.5vw, 1.875rem); }
+    h3 { font-size: clamp(1.125rem, 4.5vw, 1.5rem); }
+    h4 { font-size: clamp(1rem, 4vw, 1.25rem); }
+    p { font-size: 0.95rem; }
+
+    /* Buttons slightly smaller */
+    .btn { font-size: 0.875rem; padding: calc(var(--space-sm)) var(--space-md); }
+    .btn-lg { font-size: 1rem; padding: var(--space-sm) var(--space-md); }
+    .btn-sm { font-size: 0.75rem; padding: calc(var(--space-xs) * 0.75) var(--space-sm); }
+
+    /* Mobile menu link size reduced */
+    .mobile-link { min-height: 48px; font-size: 1rem; }
   }
-  
+
+  /* Extra small phones: further reduce base font size */
+  @media (max-width: 380px) {
+    html { font-size: 13px; }
+    .logo { height: 28px; }
+    .mobile-link { min-height: 44px; font-size: 0.95rem; }
+  }
   /* iOS-like Signature Creations Carousel */
   .sig-grid { 
     display: flex;
@@ -2241,7 +2200,7 @@ p {
     height: 40px;
     font-size: 1.125rem;
   }
-}
+
 
 /* Small Mobile */
 @media (max-width: 480px) {
