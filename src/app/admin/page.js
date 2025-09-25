@@ -23,6 +23,16 @@ export default function AdminPage() {
   const [previewUrl, setPreviewUrl] = useState("");
 
   useEffect(() => {
+    // Mark body to disable any site-wide overlays while on admin page
+    document.body.classList.add("admin-page");
+    // Ensure scrolling allowed in case mobile menu had locked it
+    document.body.classList.remove("no-scroll");
+    return () => {
+      document.body.classList.remove("admin-page");
+    };
+  }, []);
+
+  useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {

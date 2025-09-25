@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
 import Link from "next/link";
 
@@ -10,6 +10,7 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const onScroll = () => {
@@ -28,6 +29,12 @@ export default function Navbar() {
     else document.body.classList.remove(cls);
     return () => document.body.classList.remove(cls);
   }, [mobileOpen]);
+
+  // Close any open overlays when route changes (prevents backdrop blocking clicks)
+  useEffect(() => {
+    if (mobileOpen) setMobileOpen(false);
+    if (menuOpen) setMenuOpen(false);
+  }, [pathname]);
 
   // Close profile menu on outside click or ESC
   useEffect(() => {
@@ -86,7 +93,21 @@ export default function Navbar() {
                 type="button"
                 role="menuitem"
                 className="dd-item danger"
-                onClick={async () => { await supabase.auth.signOut(); router.replace("/"); }}
+                onClick={async () => {
+                  try {
+                    const { error } = await supabase.auth.signOut();
+                    if (error) throw error;
+                  } catch (err) {
+                    console.error("Sign out failed:", err);
+                  } finally {
+                    setMenuOpen(false);
+                    try { router.replace("/"); router.refresh(); } catch {}
+                    // Hard fallback
+                    if (typeof window !== "undefined") {
+                      setTimeout(() => { window.location.href = "/"; }, 50);
+                    }
+                  }
+                }}
               >
                 Sign out
               </button>

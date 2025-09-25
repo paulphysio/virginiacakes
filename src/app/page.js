@@ -24,6 +24,9 @@ export default function Home() {
   const [featuredLoading, setFeaturedLoading] = useState(true);
   const router = useRouter();
 
+  // Normalize featured list for rendering
+  const displayProds = useMemo(() => Array.isArray(featured) ? featured : [], [featured]);
+
   // Navbar is globally rendered via RootLayout
 
   // Testimonials data (constant)
@@ -105,24 +108,47 @@ export default function Home() {
   const carouselRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [catSlidesPerView, setCatSlidesPerView] = useState(1);
 
-  // Auto-scroll every 2 seconds
+  // Signature Creations carousel
+  const sigCarouselRef = useRef(null);
+  const [sigIndex, setSigIndex] = useState(0);
+  const [sigAuto, setSigAuto] = useState(true);
+  const [sigSlidesPerView, setSigSlidesPerView] = useState(1);
+
+  // Responsive slides per view for Signature carousel
+  useEffect(() => {
+    const updateSpv = () => {
+      if (typeof window === 'undefined') return;
+      const spv = window.innerWidth >= 1024 ? 3 : 1;
+      setSigSlidesPerView(spv);
+      setCatSlidesPerView(spv);
+    };
+    updateSpv();
+    window.addEventListener('resize', updateSpv);
+    return () => window.removeEventListener('resize', updateSpv);
+  }, []);
+
+  // Auto-scroll categories by page every 3s
   useEffect(() => {
     if (!isAutoPlaying) return;
-    
+    if (displayCats.length <= catSlidesPerView) return;
     const interval = setInterval(() => {
       setCurrentIndex((prev) => {
-        const nextIndex = (prev + 1) % displayCats.length;
-        return nextIndex;
+        const maxIndex = Math.max(displayCats.length - catSlidesPerView, 0);
+        return prev >= maxIndex ? 0 : prev + 1;
       });
-    }, 2000);
-
+    }, 3000);
     return () => clearInterval(interval);
-  }, [isAutoPlaying, displayCats.length]);
+  }, [isAutoPlaying, displayCats.length, catSlidesPerView]);
 
   // Handle manual navigation
   const goToSlide = (index) => {
-    setCurrentIndex(index);
+    const maxIndex = Math.max(displayCats.length - catSlidesPerView, 0);
+    let next = index;
+    if (index > maxIndex) next = 0;
+    if (index < 0) next = maxIndex;
+    setCurrentIndex(next);
     setIsAutoPlaying(false);
     // Resume autoplay after 5 seconds
     setTimeout(() => setIsAutoPlaying(true), 5000);
@@ -135,6 +161,32 @@ export default function Home() {
   const prevSlide = () => {
     goToSlide(currentIndex === 0 ? displayCats.length - 1 : currentIndex - 1);
   };
+
+  // Signature carousel controls
+  const sigGoTo = (index) => {
+    const count = displayProds.length;
+    const maxIndex = Math.max(count - sigSlidesPerView, 0);
+    const clamped = Math.min(Math.max(index, 0), maxIndex);
+    setSigIndex(clamped);
+    setSigAuto(false);
+    // Resume autoplay after 5s
+    setTimeout(() => setSigAuto(true), 5000);
+  };
+
+  const sigNext = () => sigGoTo(sigIndex + 1);
+  const sigPrev = () => sigGoTo(sigIndex - 1);
+
+  // Signature autoplay
+  useEffect(() => {
+    if (!sigAuto || displayProds.length <= sigSlidesPerView) return;
+    const id = setInterval(() => {
+      setSigIndex((i) => {
+        const maxIndex = Math.max(displayProds.length - sigSlidesPerView, 0);
+        return i >= maxIndex ? 0 : i + 1;
+      });
+    }, 4000);
+    return () => clearInterval(id);
+  }, [sigAuto, displayProds.length, sigSlidesPerView]);
   useEffect(() => {
     (async () => {
       const { data, error } = await supabase
@@ -164,14 +216,16 @@ export default function Home() {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             entry.target.classList.add("in-view");
+            io.unobserve(entry.target);
           }
         });
       },
       { threshold: 0.15 }
     );
+    // Observe all current reveal elements (handles elements added after loading completes)
     document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
     return () => io.disconnect();
-  }, []);
+  }, [catsLoading, featuredLoading]);
 
   useEffect(() => {
     // Simple auto-play for testimonials
@@ -281,8 +335,8 @@ export default function Home() {
             <h1 className="gradient-text">Virginia Cakes & Confectionery</h1>
             <p>Handcrafted with premium ingredients and refined artistry. Delivered fresh, right on time.</p>
             <div className="hero-ctas">
-              <a href="#cakes" className="btn btn-gold" aria-label="Order cakes now">Order Now</a>
-              <Link href="/custom-order" className="btn btn-outline" aria-label="Explore custom cake options">Custom Orders</Link>
+              <a href="#cakes" className="btn btn-primary btn-lg" aria-label="Order cakes now">Order Now</a>
+              <Link href="/custom-order" className="btn btn-outline btn-lg" aria-label="Explore custom cake options">Custom Orders</Link>
             </div>
             <ul className="trust">
               <li>Trusted by 5k+ celebrants</li>
@@ -290,7 +344,7 @@ export default function Home() {
               <li>Secure checkout</li>
             </ul>
           </div>
-          <div className="hero-media reveal fade-in">
+          <div className="hero-media reveal slide-left">
             <div className="hero-image-frame">
               <img src="/hero_cake.jpg" alt="Featured luxury cake" className="hero-image" />
             </div>
@@ -301,11 +355,11 @@ export default function Home() {
       {/* Categories Spotlight */}
       <section className="section categories-spotlight">
         <div className="container">
-          <h2 className="section-title">Shop by Category</h2>
-          <p className="muted" style={{ textAlign: "center", marginBottom: 20 }}>
+          <h2 className="section-title reveal slide-up">Shop by Category</h2>
+          <p className="text-large reveal slide-up" style={{ textAlign: "center", marginBottom: "var(--space-xl)", color: "var(--foreground-secondary)" }}>
             Explore our full range of indulgent treats beyond cakes.
           </p>
-          {catsLoading ? (
+          {catsLoading && displayCats.length === 0 ? (
             <div className="card-grid">
               <div className="card skeleton" style={{ gridColumn: "1 / -1" }}>
                 <div className="skeleton-media" />
@@ -313,62 +367,62 @@ export default function Home() {
               </div>
             </div>
           ) : (
-            <div className="carousel-container">
+            <div className="carousel-container categories-carousel">
               <div className="carousel-wrapper" ref={carouselRef}>
                 <div 
                   className="carousel-track" 
-                  style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+                  style={{ transform: `translateX(-${currentIndex * (100 / catSlidesPerView)}%)` }}
                 >
-                  {displayCats.map((c, index) => (
+                  {displayCats.map((c) => (
                     <div key={c.slug} className="carousel-slide">
-                      <Link href={`/categories/${c.slug}`} className="card">
+                      <Link href={`/categories/${c.slug}`} className="card reveal fade-in">
                         <div className="card-media">
                           <img src={c.image_url || "/hero_cake.jpg"} alt={c.name} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "/hero_cake.jpg"; }} />
                         </div>
                         <div className="card-body">
                           <h3>{c.name}</h3>
                           <p>Discover our {c.name.toLowerCase()} selection.</p>
-                          <span className="btn btn-outline btn-sm">Explore</span>
+                          <span className="btn btn-primary btn-sm">Explore</span>
                         </div>
                       </Link>
                     </div>
                   ))}
                 </div>
               </div>
-              
-              {/* Navigation buttons */}
-              <button className="carousel-btn carousel-btn-prev" onClick={prevSlide} aria-label="Previous category">
+              <button className="carousel-btn carousel-btn-prev" aria-label="Previous categories" onClick={() => goToSlide(currentIndex - 1)}>
                 ‹
               </button>
-              <button className="carousel-btn carousel-btn-next" onClick={nextSlide} aria-label="Next category">
+              <button className="carousel-btn carousel-btn-next" aria-label="Next categories" onClick={() => goToSlide(currentIndex + 1)}>
                 ›
               </button>
               
-              {/* Dots indicator */}
+              {/* Dots indicator (page-based) */}
               <div className="carousel-dots">
-                {displayCats.map((_, index) => (
+                {Array.from({ length: Math.max(displayCats.length - catSlidesPerView + 1, 1) }).map((_, i) => (
                   <button
-                    key={index}
-                    className={`carousel-dot ${index === currentIndex ? 'active' : ''}`}
-                    onClick={() => goToSlide(index)}
-                    aria-label={`Go to slide ${index + 1}`}
+                    key={i}
+                    className={`carousel-dot ${i === currentIndex ? 'active' : ''}`}
+                    onClick={() => goToSlide(i)}
+                    aria-label={`Go to categories page ${i + 1}`}
                   />
                 ))}
               </div>
             </div>
           )}
-          <div style={{ textAlign: "center", marginTop: 16 }}>
-            <Link className="btn btn-gold" href="/categories">View all categories</Link>
+          <div style={{ textAlign: "center", marginTop: "var(--space-xl)" }} className="reveal slide-up">
+            <Link className="btn btn-gold btn-lg" href="/categories">View all categories</Link>
           </div>
         </div>
       </section>
 
-      {/* Signature Creations (Rebuilt) */}
-      <section id="cakes" className="section signature">
+      {/* Signature Creations */}
+      <section id="cakes" className="section signature-creations">
         <div className="container">
-          <div className="signature-head reveal slide-up">
-            <h2 className="section-title">Our Signature Creations</h2>
-            <p className="muted">Elevated favorites, perfected by our pâtissiers.</p>
+          <div className="signature-head">
+            <h2 className="section-title reveal slide-up">Signature Creations</h2>
+            <p className="text-large reveal slide-up" style={{ textAlign: "center", marginBottom: "var(--space-xl)", color: "var(--foreground-secondary)" }}>
+              Handcrafted masterpieces for life&#39;s most precious moments.
+            </p>
           </div>
           {featuredLoading ? (
             <div className="sig-grid">
@@ -394,68 +448,176 @@ export default function Home() {
               </div>
             </div>
           ) : (
-            <div className="sig-grid">
-              {/* Highlight primary card */}
-              {featured[0] && (
-                <SignatureCard key={featured[0].id} product={featured[0]} variant="lg" onOrder={handleOrder} />
-              )}
-              {/* Supporting cards */}
-              {featured.slice(1, 8).map((p) => (
-                <SignatureCard key={p.id} product={p} onOrder={handleOrder} />
-              ))}
+            <div className="carousel-container signature-creations">
+              <div className="carousel-wrapper" ref={sigCarouselRef}>
+                <div 
+                  className="carousel-track" 
+                  style={{ transform: `translateX(-${sigIndex * (100 / sigSlidesPerView)}%)` }}
+                >
+                  {displayProds.map((p, idx) => (
+                    <div key={p.id} className="carousel-slide">
+                      <SignatureCard product={p} isLarge={idx < 2} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <button className="carousel-btn carousel-btn-prev" aria-label="Previous" onClick={sigPrev}>
+                ‹
+              </button>
+              <button className="carousel-btn carousel-btn-next" aria-label="Next" onClick={sigNext}>
+                ›
+              </button>
+              <div className="carousel-dots">
+                {Array.from({ length: Math.max(displayProds.length - sigSlidesPerView + 1, 1) }).map((_, i) => (
+                  <button 
+                    key={i} 
+                    className={`carousel-dot ${i === sigIndex ? 'active' : ''}`} 
+                    aria-label={`Go to slide ${i + 1}`}
+                    onClick={() => sigGoTo(i)}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </div>
       </section>
 
-      {/* Custom Orders */}
-      <section id="custom" className="section custom">
-        <div className="container custom-grid">
-          <div className="custom-title reveal slide-up">
-            <h2 className="section-title">Your Imagination, Our Creation</h2>
-          </div>
-          <div className="custom-media reveal fade-in">
-            <div className="image-frame">
-              <img src="/custom_cake.jpg" alt="Custom cake" />
+      {/* Bespoke Creations */}
+      <section className="section bespoke-section">
+        <div className="container-wide">
+          <div className="bespoke-wrapper">
+            {/* Left Column - Visual Showcase */}
+            <div className="showcase-column reveal slide-left">
+              <div className="showcase-header">
+                <span className="showcase-label">Bespoke Creations</span>
+                <h2>Artistry Meets <br />Culinary Excellence</h2>
+              </div>
+              
+              <div className="visual-grid">
+                <div className="main-visual">
+                  <img 
+                    src="/wedding_cake.jpg" 
+                    alt="Bespoke cake artistry" 
+                    onError={(e) => { 
+                      e.currentTarget.onerror = null; 
+                      e.currentTarget.src = "/hero_cake.jpg"; 
+                    }}
+                  />
+                </div>
+                <div className="accent-visuals">
+                  <div className="accent-item">
+                    <img 
+                      src="/chocolate_cake.jpg" 
+                      alt="Detail work" 
+                      onError={(e) => { 
+                        e.currentTarget.onerror = null; 
+                        e.currentTarget.src = "/hero_cake.jpg"; 
+                      }}
+                    />
+                  </div>
+                  <div className="accent-item">
+                    <img 
+                      src="/redvelvet.jpg" 
+                      alt="Finishing touches" 
+                      onError={(e) => { 
+                        e.currentTarget.onerror = null; 
+                        e.currentTarget.src = "/hero_cake.jpg"; 
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="custom-copy reveal slide-up">
-            <p>
-              From intimate celebrations to grand occasions, our maîtres pâtissiers craft one‑of‑a‑kind cakes that tell your story — flavors balanced to perfection and finishes tailored to your theme.
-            </p>
-            <ul className="assurances">
-              <li>Design mockups and expert guidance</li>
-              <li>Premium ingredients; never overly sweet</li>
-              <li>Careful delivery and onsite setup</li>
-            </ul>
-            <ol className="process">
-              <li>
-                <div className="num">1</div>
-                <div>
-                  <h4>Consult</h4>
-                  <p>Share your vision, colors, servings, and date. We’ll align on style and budget.</p>
+
+            {/* Right Column - Content */}
+            <div className="content-column reveal slide-right">
+              <div className="content-inner">
+                <p className="lead-text">
+                  Transform your vision into an edible masterpiece. Our master pâtissiers collaborate 
+                  with you to design exceptional cakes that serve as centerpieces for life&#39;s most 
+                  significant moments.
+                </p>
+
+                <div className="expertise-grid">
+                  <div className="expertise-item">
+                    <div className="expertise-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h4>Master Craftsmanship</h4>
+                      <p>15+ years of award-winning pastry expertise</p>
+                    </div>
+                  </div>
+
+                  <div className="expertise-item">
+                    <div className="expertise-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v6m0 6v6m11-6h-6m-6 0H1"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h4>Precision Engineering</h4>
+                      <p>Structural integrity meets artistic vision</p>
+                    </div>
+                  </div>
+
+                  <div className="expertise-item">
+                    <div className="expertise-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/>
+                        <line x1="16" y1="8" x2="2" y2="22"/>
+                        <line x1="17.5" y1="15" x2="9" y2="15"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h4>Collaborative Design</h4>
+                      <p>Your concept refined through expert consultation</p>
+                    </div>
+                  </div>
                 </div>
-              </li>
-              <li>
-                <div className="num">2</div>
-                <div>
-                  <h4>Design</h4>
-                  <p>Receive a visual concept and flavor pairing recommendations from our team.</p>
+
+                <div className="process-timeline">
+                  <h3>Our Approach</h3>
+                  <div className="timeline-items">
+                    <div className="timeline-item">
+                      <span className="timeline-marker">01</span>
+                      <div className="timeline-content">
+                        <h5>Discovery & Consultation</h5>
+                        <p>In-depth discussion of your vision, event details, and design preferences</p>
+                      </div>
+                    </div>
+                    <div className="timeline-item">
+                      <span className="timeline-marker">02</span>
+                      <div className="timeline-content">
+                        <h5>Concept Development</h5>
+                        <p>Detailed sketches, flavor profiles, and structural planning</p>
+                      </div>
+                    </div>
+                    <div className="timeline-item">
+                      <span className="timeline-marker">03</span>
+                      <div className="timeline-content">
+                        <h5>Artisan Creation</h5>
+                        <p>Meticulous handcrafting using premium ingredients and techniques</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </li>
-              <li>
-                <div className="num">3</div>
-                <div>
-                  <h4>Create & Deliver</h4>
-                  <p>Baked fresh, finished with precision, and delivered on schedule.</p>
+
+                <div className="cta-section">
+                  <Link href="/custom-order" className="btn-primary-elegant">
+                    Begin Your Commission
+                  </Link>
+                  <div className="consultation-note">
+                    <span>Complimentary consultation</span>
+                    <span>•</span>
+                    <span>14-day minimum lead time</span>
+                  </div>
                 </div>
-              </li>
-            </ol>
-            <div className="custom-ctas">
-              <Link className="btn btn-gold" href="/custom-order">Start Your Custom Order</Link>
-              <Link className="btn btn-outline" href="/contact">Talk to a Specialist</Link>
+              </div>
             </div>
-            <p className="micro muted">Average lead time: 5–7 days • Rush available</p>
           </div>
         </div>
       </section>
@@ -465,10 +627,10 @@ export default function Home() {
         <div className="container">
           <h2 className="section-title reveal slide-up">Why Choose Us</h2>
           <div className="feature-grid">
-            <Feature icon={leafIcon()} title="Fresh Ingredients" text="Only premium, fresh ingredients for impeccable taste." />
-            <Feature icon={sparkleIcon()} title="Elegant Designs" text="Refined aesthetics with meticulous attention to detail." />
-            <Feature icon={truckIcon()} title="Fast Delivery" text="Handled with care and delivered on schedule." />
-            <Feature icon={starIcon()} title="Premium Taste" text="Balanced flavors crafted by expert pâtissiers." />
+            <div className="reveal slide-up"><Feature icon={leafIcon()} title="Fresh Ingredients" text="Only premium, fresh ingredients for impeccable taste." /></div>
+            <div className="reveal slide-up"><Feature icon={sparkleIcon()} title="Elegant Designs" text="Refined aesthetics with meticulous attention to detail." /></div>
+            <div className="reveal slide-up"><Feature icon={truckIcon()} title="Fast Delivery" text="Handled with care and delivered on schedule." /></div>
+            <div className="reveal slide-up"><Feature icon={starIcon()} title="Premium Taste" text="Balanced flavors crafted by expert pâtissiers." /></div>
           </div>
         </div>
       </section>
@@ -529,7 +691,6 @@ export default function Home() {
           <div>
             <h4>Contact</h4>
             <ul className="muted">
-              <li>123 Premier Avenue, City, Country</li>
               <li>+234 708 345 3202</li>
               <li>support@virginiascakes.com</li>
             </ul>
@@ -550,8 +711,8 @@ export default function Home() {
 
       {/* Mobile Sticky CTA */}
       <div className="mobile-cta" aria-hidden="true">
-        <a href="#cakes" className="btn btn-gold btn-sm">Order Now</a>
-        <Link href="/custom-order" className="btn btn-outline btn-sm">Custom Cake</Link>
+        <a href="#cakes" className="btn btn-primary">Order Now</a>
+        <Link href="/custom-order" className="btn btn-outline">Custom Cake</Link>
       </div>
     </div>
   );
@@ -559,7 +720,7 @@ export default function Home() {
 
 function Feature({ icon, title, text }) {
   return (
-    <div className="feature reveal fade-in">
+    <div className="feature">
       <div className="feature-icon">{icon}</div>
       <h3>{title}</h3>
       <p>{text}</p>
@@ -710,3 +871,4 @@ function tiktokIcon() {
     </svg>
   );
 }
+
