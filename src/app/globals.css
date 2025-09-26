@@ -1853,8 +1853,8 @@ p {
     position: fixed;
     left: 0;
     right: 0;
-    /* Keep slightly above bottom so Android browser toolbar doesn't cover it; still respect iOS safe area */
-    bottom: calc(max(8px, env(safe-area-inset-bottom)));
+    /* Act like a constant bottom navbar */
+    bottom: 0;
     padding: var(--space-md) var(--space-lg) calc(var(--space-md) + env(safe-area-inset-bottom));
     box-sizing: border-box;
     max-width: 100vw;
@@ -1868,8 +1868,13 @@ p {
     display: none; /* enabled at mobile breakpoint */
     justify-content: center;
     gap: var(--space-md);
-    z-index: 950; /* below mobile menu (1000), above content/backdrops (<= 900) */
-    animation: pulse 2s ease-in-out 2s infinite;
+    z-index: 1200; /* below mobile menu (>= 1300), above content/backdrops */
+    /* Persistent visibility */
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    /* Avoid any motion that could look like shaking */
+    animation: none;
   }
 
 .mobile-cta::before {
