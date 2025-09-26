@@ -344,8 +344,8 @@ export default function Home() {
       <section id="home" className="hero">
         <div className="container hero-grid">
           <div className="hero-text reveal slide-up">
-            <div className="badge">Since 2010 • Award‑Winning Pâtisserie</div>
-            <h1 className="gradient-text">Virginia Cakes & Confectionery</h1>
+            <div className="badge">Winner • Bakers’ Choice Easter Bake‑Off Challenge</div>
+            <h1 className="gradient-text hero-title">Virginia Cakes & Confectionery</h1>
             <p>Handcrafted with premium ingredients and refined artistry. Delivered fresh, right on time.</p>
             <div className="hero-ctas">
               <a href="#cakes" className="btn btn-primary btn-lg" aria-label="Order cakes now">Order Now</a>

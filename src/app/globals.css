@@ -1031,11 +1031,42 @@ p {
   50% { background-position: 100% 50%; }
 }
 
+/* Duplicate camelCase keyframes used by components expecting 'gradientFlow' */
+@keyframes gradientFlow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Subtle glow to enhance premium feel (safe on transparent text via filter) */
+@keyframes textGlow {
+  0% { filter: drop-shadow(0 0 0px rgba(212, 175, 55, 0.0)); }
+  100% { filter: drop-shadow(0 2px 8px rgba(212, 175, 55, 0.25)); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hero-image { animation: none; }
   .hero-text h1 { animation: none; }
   .hero-image-frame { transform: none; }
   .hero-image-frame:hover { transform: scale(1.02); }
+}
+
+/* Animated Gradient Title */
+.hero-title {
+  background: linear-gradient(135deg,
+    var(--foreground) 0%,
+    var(--primary-dark) 30%,
+    var(--accent-gold) 60%,
+    var(--primary) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  background-size: 300% 300%;
+  animation: gradientFlow 6s ease-in-out infinite, textGlow 3s ease-in-out infinite alternate;
+}
+
+/* Ensure hero title keeps animating even if reduced motion is set (per user request) */
+@media (prefers-reduced-motion: reduce) {
+  .hero-title { animation: gradientFlow 10s linear infinite; }
 }
 
 /* ===== BUTTON SYSTEM ===== */
