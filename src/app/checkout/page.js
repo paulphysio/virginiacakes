@@ -61,31 +61,50 @@ function CheckoutContent() {
     }
   }, [total]);
 
+  // Utility: race a promise with a timeout to avoid indefinite hanging
+  function raceWithTimeout(promise, ms, label = "operation") {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)),
+    ]);
+  }
+
   // Utility: compress an image strongly using canvas
   async function compressImage(file, maxW = 1024, maxH = 1024, quality = 0.3) {
     return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        let { width, height } = img;
-        const ratio = Math.min(maxW / width, maxH / height, 1);
-        width = Math.floor(width * ratio);
-        height = Math.floor(height * ratio);
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) return reject(new Error("Compression failed"));
-            resolve(blob);
-          },
-          "image/jpeg",
-          quality
-        );
-      };
-      img.onerror = () => reject(new Error("Invalid image"));
-      img.src = URL.createObjectURL(file);
+      try {
+        const img = new Image();
+        const objectUrl = URL.createObjectURL(file);
+        img.onload = () => {
+          try {
+            let { width, height } = img;
+            const ratio = Math.min(maxW / width, maxH / height, 1);
+            width = Math.floor(width * ratio);
+            height = Math.floor(height * ratio);
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob(
+              (blob) => {
+                try { URL.revokeObjectURL(objectUrl); } catch {}
+                if (!blob) return reject(new Error("Compression failed"));
+                resolve(blob);
+              },
+              "image/jpeg",
+              quality
+            );
+          } catch (err) {
+            try { URL.revokeObjectURL(objectUrl); } catch {}
+            reject(err);
+          }
+        };
+        img.onerror = () => { try { URL.revokeObjectURL(objectUrl); } catch {}; reject(new Error("Invalid image")); };
+        img.src = objectUrl;
+      } catch (err) {
+        reject(err);
+      }
     });
   }
 
@@ -111,23 +130,30 @@ function CheckoutContent() {
 
       setSubmitting(true);
 
-      // Strong compression
-      const compressed = await compressImage(proofFile, 1024, 1024, 0.28);
+      // Strong compression with timeout safety
+      const compressed = await raceWithTimeout(
+        compressImage(proofFile, 1024, 1024, 0.28),
+        20000,
+        "Image compression"
+      );
       // Ensure max ~500KB
       let finalBlob = compressed;
       if (compressed.size > 500 * 1024) {
-        // second pass
-        const second = await compressImage(proofFile, 900, 900, 0.22);
+        // second pass with timeout
+        const second = await raceWithTimeout(
+          compressImage(proofFile, 900, 900, 0.22),
+          15000,
+          "Secondary compression"
+        );
         finalBlob = second;
       }
       const proof_base64 = await fileToBase64(finalBlob);
       const proof_size = finalBlob.size;
       const proof_mime = "image/jpeg";
 
+      // Build payload for secure server route
       const payload = {
         user_id: user.id,
-        cart_id: cartId,
-        amount_naira: total,
         payer_name: payerName.trim(),
         phone: phone.trim(),
         transfer_reference: transferRef.trim() || null,
@@ -135,13 +161,34 @@ function CheckoutContent() {
         proof_base64,
         proof_mime,
         proof_size,
-        status: "pending",
       };
 
-      const { error: insertErr } = await supabase.from("bank_transfers").insert(payload);
-      if (insertErr) throw insertErr;
+      // Get access token for server verification
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+
+      const resp = await raceWithTimeout(
+        fetch("/api/checkout/submit-proof", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
+          body: JSON.stringify(payload),
+        }),
+        20000,
+        "Payment submission"
+      );
+      if (!resp.ok) {
+        const errJson = await resp.json().catch(() => ({}));
+        throw new Error(errJson?.error || `Submission failed (${resp.status})`);
+      }
+      const json = await resp.json();
 
       setMessage("Thank you! Your payment proof has been submitted for review. We'll verify and update your order shortly.");
+
+      // Notify UI to refresh cart badge
+      try { if (typeof window !== 'undefined') { window.dispatchEvent(new CustomEvent('cart:updated')); } } catch {}
 
       // Auto-open WhatsApp chat if configured
       if (WHATSAPP_NUMBER) {
@@ -166,7 +213,7 @@ function CheckoutContent() {
       setPaidAt("");
       setProofFile(null);
     } catch (e) {
-      setError(e?.message || "Unable to submit your payment proof");
+      setError(e?.message || "Unable to submit your payment proof. Please check your internet connection and try again.");
     } finally {
       setSubmitting(false);
     }
@@ -175,7 +222,10 @@ function CheckoutContent() {
   return (
     <section className="section">
       <div className="container">
-        <h2 className="section-title">Checkout</h2>
+        <h2 className="section-title">Checkout & Payment</h2>
+        <p className="muted" style={{ textAlign: "center", margin: "8px 0 var(--space-xl)" }}>
+          Review your order total and submit your proof of payment to place your order for processing.
+        </p>
         <div className="card" style={{ padding: 20, display: "grid", gap: 12 }}>
           {loading ? (
             <p className="muted">Loading...</p>
@@ -227,7 +277,9 @@ function CheckoutContent() {
 
               <div className="card" style={{ padding: 16, background: "#fff5f8", border: "1px solid #F8C8DC" }}>
                 <h3 style={{ margin: 0, color: "#333" }}>Pay via Bank Transfer</h3>
-                <p className="muted" style={{ marginTop: 6 }}>Kindly make a transfer of the total amount to the account below, then upload your proof of payment.</p>
+                <p className="muted" style={{ marginTop: 6 }}>
+                  Please transfer the total amount to the account below, then upload a clear proof of payment to place your order.
+                </p>
                 <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
                   <div style={{ display: "grid", gridTemplateColumns: "160px 1fr auto", alignItems: "center", gap: 8 }}>
                     <strong>Account Name:</strong>
@@ -321,7 +373,7 @@ function CheckoutContent() {
                   <p className="muted">We will compress the image heavily before secure storage to keep your data usage minimal.</p>
                 </div>
                 <button className="btn btn-gold" type="submit" disabled={submitting}>
-                  {submitting ? "Submitting..." : "Submit Proof of Payment"}
+                  {submitting ? "Submitting..." : "Submit Proof of Payment & Place Order"}
                 </button>
               </form>
             </>

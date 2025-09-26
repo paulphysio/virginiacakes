@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
+import { getCartCount } from "../lib/cart";
 import Link from "next/link";
 
 export default function Navbar() {
   const navRef = useRef(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -16,11 +18,35 @@ export default function Navbar() {
     const onScroll = () => {
       if (!navRef.current) return;
       if (window.scrollY > 8) navRef.current.classList.add("nav-scrolled");
-      else navRef.current.classList.remove("nav-scrolled");
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    let unsubAuth;
+    let unsubEvent;
+    let mounted = true;
+    async function loadCount() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { if (mounted) setCartCount(0); return; }
+        const count = await getCartCount(user.id);
+        if (mounted) setCartCount(count || 0);
+      } catch (e) {
+        // swallow
+      }
+    }
+    loadCount();
+    // Update on auth state change
+    const { data: sub } = supabase.auth.onAuthStateChange(() => loadCount());
+    unsubAuth = () => sub.subscription.unsubscribe();
+    // Update on custom cart events (dispatched after add-to-cart, etc.)
+    const onCartUpdated = () => loadCount();
+    window.addEventListener('cart:updated', onCartUpdated);
+    unsubEvent = () => window.removeEventListener('cart:updated', onCartUpdated);
+    return () => { mounted = false; try { unsubAuth && unsubAuth(); } catch {}; try { unsubEvent && unsubEvent(); } catch {}; };
   }, []);
 
   useEffect(() => {
@@ -30,32 +56,19 @@ export default function Navbar() {
     return () => document.body.classList.remove(cls);
   }, [mobileOpen]);
 
-  // Close any open overlays when route changes (prevents backdrop blocking clicks)
   useEffect(() => {
     if (mobileOpen) setMobileOpen(false);
     if (menuOpen) setMenuOpen(false);
+    // Also refresh cart count when navigating
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setCartCount(0); return; }
+        const count = await getCartCount(user.id);
+        setCartCount(count || 0);
+      } catch {}
+    })();
   }, [pathname]);
-
-  // Close profile menu on outside click or ESC
-  useEffect(() => {
-    function onDocClick(e) {
-      if (!navRef.current) return;
-      const btn = navRef.current.querySelector(".profile-btn");
-      const dd = navRef.current.querySelector(".profile-dropdown");
-      if (btn && btn.contains(e.target)) return;
-      if (dd && dd.contains(e.target)) return;
-      setMenuOpen(false);
-    }
-    function onKey(e) { if (e.key === "Escape") setMenuOpen(false); }
-    if (menuOpen) {
-      document.addEventListener("mousedown", onDocClick);
-      document.addEventListener("keydown", onKey);
-    }
-    return () => {
-      document.removeEventListener("mousedown", onDocClick);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [menuOpen]);
 
   return (
     <>
@@ -73,8 +86,11 @@ export default function Navbar() {
           <Link href="/contact">Contact</Link>
         </nav>
         <div className="nav-right">
-          <button className="icon-btn" aria-label="Cart" onClick={() => router.push("/cart")}>
+          <button className="icon-btn cart-btn" aria-label="Cart" onClick={() => router.push("/cart")}>
             {cartIcon()}
+            {cartCount > 0 && (
+              <span className="cart-badge" aria-label={`${cartCount} items in cart`}>{cartCount > 99 ? '99+' : cartCount}</span>
+            )}
           </button>
           <div className="profile-wrap">
             <button
@@ -147,6 +163,25 @@ export default function Navbar() {
     
     <style jsx>{`
       .profile-wrap { position: relative; }
+      .cart-btn { position: relative; }
+      .cart-badge {
+        position: absolute;
+        top: -6px;
+        right: -4px;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 4px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--accent-gold);
+        color: #fff;
+        font-weight: 700;
+        font-size: 11px;
+        border-radius: 9999px;
+        box-shadow: 0 2px 6px rgba(212, 175, 55, 0.35);
+        border: 1px solid rgba(255,255,255,0.8);
+      }
       .profile-dropdown {
         position: absolute;
         right: 0;

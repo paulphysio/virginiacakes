@@ -331,6 +331,11 @@ export default function Home() {
     try {
       await addItemByProductId(user.id, product.id, 1);
       alert(`Added '${product.name || product.title}' to cart.`);
+      try {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('cart:updated'));
+        }
+      } catch {}
     } catch (e) {
       alert(e?.message || "Unable to add to cart. Please try again.");
     }
@@ -469,7 +474,7 @@ export default function Home() {
                 >
                   {displayProds.map((p, idx) => (
                     <div key={p.id} className="carousel-slide">
-                      <SignatureCard product={p} isLarge={idx < 2} />
+                      <SignatureCard product={p} isLarge={idx < 2} onOrder={handleOrder} />
                     </div>
                   ))}
                 </div>

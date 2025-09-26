@@ -108,6 +108,17 @@ export async function getCartLineItems(userId) {
   return { cartId, items };
 }
 
+export async function getCartCount(userId) {
+  const cartId = await getOpenCartId(userId);
+  if (!cartId) return 0;
+  const { data: items, error } = await supabase
+    .from("cart_items")
+    .select("quantity")
+    .eq("cart_id", cartId);
+  if (error) throw error;
+  return (items || []).reduce((sum, it) => sum + (it.quantity || 0), 0);
+}
+
 export async function completeCheckout(userId, paystack_ref) {
   // Fetch items and compute totals
   const { cartId, items } = await getCartLineItems(userId);
@@ -141,6 +152,13 @@ export async function completeCheckout(userId, paystack_ref) {
     .update({ status: "ordered" })
     .eq("id", cartId);
   if (updErr) throw updErr;
+
+  // Notify UI to refresh cart count/badges
+  try {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cart:updated'));
+    }
+  } catch {}
 
   return { orderId: order.id, total_naira, paystack_ref };
 }
