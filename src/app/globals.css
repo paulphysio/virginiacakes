@@ -66,7 +66,12 @@
 /* Tablet support: show mobile CTA up to 1024px width */
 @media (max-width: 1024px) {
   .mobile-cta {
-    display: flex;
+    display: flex !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1200 !important;
   }
   /* Reserve space so content isn't hidden behind the fixed CTA */
   body {
@@ -1879,50 +1884,48 @@ p {
   text-align: center;
 }
 
-  /* Enhanced Mobile Sticky CTA */
+  /* Enhanced Mobile Sticky CTA - works on all devices */
   .mobile-cta {
     position: fixed;
     left: 0;
     right: 0;
-    /* Act like a constant bottom navbar */
     bottom: 0;
     padding: var(--space-md) var(--space-lg) calc(var(--space-md) + env(safe-area-inset-bottom));
     box-sizing: border-box;
     max-width: 100vw;
-    /* iOS Safari stability hints */
-    -webkit-transform: translateZ(0);
-    transform: translateZ(0);
+    /* iOS Safari stability */
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
     will-change: transform;
-    contain: layout paint;
     display: none; /* enabled at mobile breakpoint */
     justify-content: center;
+    align-items: center;
     gap: var(--space-md);
-    z-index: 1200; /* below mobile menu (>= 1300), above content/backdrops */
-    /* Persistent visibility */
+    z-index: 1200;
     visibility: visible;
     opacity: 1;
     pointer-events: auto;
-    /* Avoid any motion that could look like shaking */
     animation: none;
+    /* Ensure it stays above everything */
+    isolation: isolate;
   }
 
 .mobile-cta::before {
   content: "";
   position: absolute;
-  inset: var(--space-sm);
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
+  inset: 0;
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
-  will-change: transform;
-  contain: layout paint;
   border-radius: var(--radius-xl);
-  background: rgba(248, 200, 220, 0.1);
-  backdrop-filter: var(--blur-strong);
-  box-shadow: 0 20px 40px rgba(248, 200, 220, 0.2);
-  border: 1px solid rgba(248, 200, 220, 0.3);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 -4px 20px rgba(248, 200, 220, 0.25), 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-top: 1px solid rgba(248, 200, 220, 0.4);
   z-index: -1;
 }
 
@@ -2312,13 +2315,24 @@ p {
   }
   
   .mobile-cta {
-    left: var(--space-sm);
-    right: var(--space-sm);
-    padding: var(--space-sm) var(--space-md) calc(var(--space-sm) + env(safe-area-inset-bottom));
+    display: flex !important;
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    gap: 10px;
+    z-index: 1200 !important;
+  }
+  .mobile-cta .btn {
+    flex: 1;
+    max-width: 180px;
+    padding: 10px 16px;
+    font-size: 14px;
   }
 }
-
-/* Reduce motion for accessibility */
+  
+  /* Reduce motion for accessibility */
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;

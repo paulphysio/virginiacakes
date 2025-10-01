@@ -189,6 +189,9 @@ function CheckoutContent() {
 
       // Notify UI to refresh cart badge
       try { if (typeof window !== 'undefined') { window.dispatchEvent(new CustomEvent('cart:updated')); } } catch {}
+      
+      // Reload cart data to show it's now empty
+      await load(user.id);
 
       // Auto-open WhatsApp chat if configured
       if (WHATSAPP_NUMBER) {
@@ -221,37 +224,37 @@ function CheckoutContent() {
 
   return (
     <section className="section">
-      <div className="container">
-        <h2 className="section-title">Checkout & Payment</h2>
-        <p className="muted" style={{ textAlign: "center", margin: "8px 0 var(--space-xl)" }}>
-          Review your order total and submit your proof of payment to place your order for processing.
+      <div className="container" style={{ maxWidth: 720 }}>
+        <h2 className="section-title" style={{ fontSize: "1.75rem", marginBottom: "0.5rem" }}>Checkout & Payment</h2>
+        <p className="muted" style={{ textAlign: "center", margin: "0 0 var(--space-lg)", fontSize: "0.9rem" }}>
+          Review your order and submit proof of payment to place your order.
         </p>
-        <div className="card" style={{ padding: 20, display: "grid", gap: 12 }}>
+        <div className="card" style={{ padding: "16px", display: "grid", gap: 16 }}>
           {loading ? (
             <p className="muted">Loading...</p>
           ) : items.length === 0 ? (
             <p className="muted">Your cart is empty.</p>
           ) : (
             <>
-              <div className="cart-review" style={{ display: "grid", gap: 8 }}>
+              <div className="cart-review" style={{ display: "grid", gap: 8, fontSize: "0.9rem" }}>
                 {items.map((it) => (
-                  <div key={it.id} style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span>{it.product?.name} × {it.quantity}</span>
-                    <span>
+                  <div key={it.id} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                    <span style={{ flex: 1 }}>{it.product?.name} × {it.quantity}</span>
+                    <span style={{ fontWeight: 600, whiteSpace: "nowrap" }}>
                       {new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 })
                         .format((it.product?.price_naira || 0) * it.quantity)}
                     </span>
                   </div>
                 ))}
-                <hr style={{ border: 0, borderTop: "1px solid #eee" }} />
-                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
+                <hr style={{ border: 0, borderTop: "1px solid #eee", margin: "4px 0" }} />
+                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: "1rem" }}>
                   <span>Total</span>
                   <span>{formattedTotal}</span>
                 </div>
               </div>
 
-              {error && <div style={{ color: "#b00020" }}>{error}</div>}
-              {message && <div className="muted">{message}</div>}
+              {error && <div style={{ color: "#b00020", fontSize: "0.9rem", padding: "10px", background: "#fff0f0", borderRadius: "8px" }}>{error}</div>}
+              {message && <div style={{ color: "#2e7d32", fontSize: "0.9rem", padding: "10px", background: "#f0fff5", borderRadius: "8px", fontWeight: 600 }}>{message}</div>}
               {showWhatsAppPrompt && whatsAppUrl && (
                 <div className="card" style={{
                   padding: 12,
@@ -275,26 +278,26 @@ function CheckoutContent() {
                 </div>
               )}
 
-              <div className="card" style={{ padding: 16, background: "#fff5f8", border: "1px solid #F8C8DC" }}>
-                <h3 style={{ margin: 0, color: "#333" }}>Pay via Bank Transfer</h3>
-                <p className="muted" style={{ marginTop: 6 }}>
-                  Please transfer the total amount to the account below, then upload a clear proof of payment to place your order.
+              <div className="card" style={{ padding: 14, background: "#fff5f8", border: "1px solid #F8C8DC" }}>
+                <h3 style={{ margin: 0, color: "#333", fontSize: "1rem" }}>Pay via Bank Transfer</h3>
+                <p className="muted" style={{ marginTop: 6, fontSize: "0.85rem" }}>
+                  Transfer the total amount to the account below, then upload proof to place your order.
                 </p>
-                <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "160px 1fr auto", alignItems: "center", gap: 8 }}>
-                    <strong>Account Name:</strong>
-                    <span>{ACCOUNT_NAME}</span>
-                    <button className="btn" onClick={() => navigator.clipboard.writeText(ACCOUNT_NAME)}>Copy</button>
+                <div style={{ display: "grid", gap: 8, marginTop: 10, fontSize: "0.85rem" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "120px 1fr auto", alignItems: "center", gap: 8 }}>
+                    <strong style={{ fontSize: "0.85rem" }}>Account Name:</strong>
+                    <span style={{ fontSize: "0.85rem" }}>{ACCOUNT_NAME}</span>
+                    <button className="btn" style={{ padding: "6px 12px", fontSize: "0.8rem" }} onClick={() => navigator.clipboard.writeText(ACCOUNT_NAME)}>Copy</button>
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "160px 1fr auto", alignItems: "center", gap: 8 }}>
-                    <strong>Account Number:</strong>
-                    <span style={{ letterSpacing: 1 }}>{ACCOUNT_NUMBER}</span>
-                    <button className="btn" onClick={() => navigator.clipboard.writeText(ACCOUNT_NUMBER)}>Copy</button>
+                  <div style={{ display: "grid", gridTemplateColumns: "120px 1fr auto", alignItems: "center", gap: 8 }}>
+                    <strong style={{ fontSize: "0.85rem" }}>Account Number:</strong>
+                    <span style={{ letterSpacing: 1, fontSize: "0.85rem", fontWeight: 600 }}>{ACCOUNT_NUMBER}</span>
+                    <button className="btn" style={{ padding: "6px 12px", fontSize: "0.8rem" }} onClick={() => navigator.clipboard.writeText(ACCOUNT_NUMBER)}>Copy</button>
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "160px 1fr auto", alignItems: "center", gap: 8 }}>
-                    <strong>Bank:</strong>
-                    <span>{BANK_NAME}</span>
-                    <button className="btn" onClick={() => navigator.clipboard.writeText(BANK_NAME)}>Copy</button>
+                  <div style={{ display: "grid", gridTemplateColumns: "120px 1fr auto", alignItems: "center", gap: 8 }}>
+                    <strong style={{ fontSize: "0.85rem" }}>Bank:</strong>
+                    <span style={{ fontSize: "0.85rem" }}>{BANK_NAME}</span>
+                    <button className="btn" style={{ padding: "6px 12px", fontSize: "0.8rem" }} onClick={() => navigator.clipboard.writeText(BANK_NAME)}>Copy</button>
                   </div>
                 </div>
                 {WHATSAPP_NUMBER ? (
@@ -324,9 +327,9 @@ function CheckoutContent() {
                 )}
               </div>
 
-              <form onSubmit={submitBankTransfer} style={{ display: "grid", gap: 12, marginTop: 10 }}>
+              <form onSubmit={submitBankTransfer} style={{ display: "grid", gap: 12, marginTop: 10, fontSize: "0.9rem" }}>
                 <div style={{ display: "grid", gap: 6 }}>
-                  <label>Full Name on the Transfer</label>
+                  <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>Full Name on the Transfer</label>
                   <input
                     type="text"
                     value={payerName}
@@ -336,7 +339,7 @@ function CheckoutContent() {
                   />
                 </div>
                 <div style={{ display: "grid", gap: 6 }}>
-                  <label>Phone Number</label>
+                  <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>Phone Number</label>
                   <input
                     type="tel"
                     value={phone}
@@ -346,7 +349,7 @@ function CheckoutContent() {
                   />
                 </div>
                 <div style={{ display: "grid", gap: 6 }}>
-                  <label>Transfer Reference/Description (optional)</label>
+                  <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>Transfer Reference (optional)</label>
                   <input
                     type="text"
                     value={transferRef}
@@ -355,7 +358,7 @@ function CheckoutContent() {
                   />
                 </div>
                 <div style={{ display: "grid", gap: 6 }}>
-                  <label>Payment Date (optional)</label>
+                  <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>Payment Date (optional)</label>
                   <input
                     type="datetime-local"
                     value={paidAt}
@@ -363,17 +366,18 @@ function CheckoutContent() {
                   />
                 </div>
                 <div style={{ display: "grid", gap: 6 }}>
-                  <label>Upload Proof of Payment (JPG/PNG)</label>
+                  <label style={{ fontSize: "0.85rem", fontWeight: 600 }}>Upload Proof of Payment (JPG/PNG)</label>
                   <input
                     type="file"
                     accept="image/*"
                     onChange={(e) => setProofFile(e.target.files?.[0] || null)}
                     required
+                    style={{ fontSize: "0.85rem" }}
                   />
-                  <p className="muted">We will compress the image heavily before secure storage to keep your data usage minimal.</p>
+                  <p className="muted" style={{ fontSize: "0.75rem", margin: 0 }}>Image will be compressed before upload to save data.</p>
                 </div>
-                <button className="btn btn-gold" type="submit" disabled={submitting}>
-                  {submitting ? "Submitting..." : "Submit Proof of Payment & Place Order"}
+                <button className="btn btn-gold" type="submit" disabled={submitting} style={{ fontSize: "0.9rem", padding: "12px 20px" }}>
+                  {submitting ? "Submitting..." : "Submit Proof & Place Order"}
                 </button>
               </form>
             </>

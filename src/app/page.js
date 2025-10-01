@@ -9,10 +9,44 @@ import { addItemByProductId } from "../lib/cart";
 
 const MobileCTA = () => {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  const ctaRef = useRef(null);
+  
+  useEffect(() => { 
+    setMounted(true); 
+  }, []);
+  
+  // Ensure CTA stays visible on mobile - prevent any scroll hiding
+  useEffect(() => {
+    if (!mounted || !ctaRef.current) return;
+    const cta = ctaRef.current;
+    
+    // Force visibility on mobile
+    const ensureVisible = () => {
+      if (window.innerWidth <= 1024) {
+        cta.style.display = 'flex';
+        cta.style.position = 'fixed';
+        cta.style.bottom = '0';
+        cta.style.left = '0';
+        cta.style.right = '0';
+        cta.style.zIndex = '1200';
+        cta.style.visibility = 'visible';
+        cta.style.opacity = '1';
+      }
+    };
+    
+    ensureVisible();
+    window.addEventListener('scroll', ensureVisible, { passive: true });
+    window.addEventListener('resize', ensureVisible, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', ensureVisible);
+      window.removeEventListener('resize', ensureVisible);
+    };
+  }, [mounted]);
+  
   if (!mounted || typeof document === 'undefined') return null;
   return createPortal(
-    <div className="mobile-cta" aria-hidden="true">
+    <div ref={ctaRef} className="mobile-cta" aria-hidden="true">
       <a href="#cakes" className="btn btn-primary">Order Now</a>
       <Link href="/custom-order" className="btn btn-outline">Custom Cake</Link>
     </div>,
@@ -507,7 +541,7 @@ export default function Home() {
             {/* Left Column - Visual Showcase */}
             <div className="showcase-column reveal slide-left">
               <div className="showcase-header">
-                <span className="showcase-label">Bespoke Creations</span>
+                <span className="showcase-label">From Thought to Taste</span>
                 <h2>Artistry Meets <br />Culinary Excellence</h2>
               </div>
               
@@ -565,7 +599,7 @@ export default function Home() {
                     </div>
                     <div>
                       <h4>Master Craftsmanship</h4>
-                      <p>15+ years of award-winning pastry expertise</p>
+                      <p>Winner • Bakers’ Choice Easter Bake‑Off Challenge</p>
                     </div>
                   </div>
 

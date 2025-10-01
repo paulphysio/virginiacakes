@@ -63,9 +63,10 @@ export async function POST(req) {
     const total_cents = total_naira * 100;
 
     // 3) Create order with pending status
+    // Try common status values that might be in your check constraint
     const { data: order, error: orderErr } = await supabaseAdmin
       .from("orders")
-      .insert({ user_id, cart_id: cart.id, total_cents, status: "pending_payment", shipping_address: null })
+      .insert({ user_id, cart_id: cart.id, total_cents, status: "pending", shipping_address: null })
       .select("id")
       .single();
     if (orderErr) return err(500, orderErr.message || "Unable to create order");
@@ -79,7 +80,7 @@ export async function POST(req) {
         product_id: it.product.id,
         quantity: qty,
         unit_price_cents: unit,
-        subtotal_cents: unit * qty,
+        // subtotal_cents is auto-calculated by database (GENERATED column)
       };
     });
     if (orderItems.length) {

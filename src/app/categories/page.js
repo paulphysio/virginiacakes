@@ -69,8 +69,10 @@ export default function CategoriesPage() {
           </div>
         ) : (
           <div className="card-grid">
-            {cats.map((c) => (
-              <Link key={c.slug} href={`/categories/${c.slug}`} className="card" style={{ overflow: "hidden" }}>
+            {cats.map((c) => {
+              const href = c.slug === "custom-cake" ? "/custom-order" : `/categories/${c.slug}`;
+              return (
+              <Link key={c.slug} href={href} className="card" style={{ overflow: "hidden" }}>
                 <div className="card-media">
                   <img src={c.image_url || "/hero_cake.jpg"} alt={c.name} />
                 </div>
@@ -82,7 +84,7 @@ export default function CategoriesPage() {
                   </span>
                 </div>
               </Link>
-            ))}
+            );})}
           </div>
         )}
       </div>
