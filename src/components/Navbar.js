@@ -13,6 +13,7 @@ export default function Navbar() {
   const [cartCount, setCartCount] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -30,31 +31,16 @@ export default function Navbar() {
     let unsubAuth;
     let unsubEvent;
     let mounted = true;
-    async function loadCount() {
+
+    async function loadCountFromUserId(userId) {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { 
-          if (mounted) {
-            setCartCount(0);
-            setIsLoggedIn(false);
-            setIsAdmin(false);
-          }
-          return;
-        }
-        if (mounted) setIsLoggedIn(true);
-        const count = await getCartCount(user.id);
+        const count = await getCartCount(userId);
         if (mounted) setCartCount(count || 0);
-      } catch (e) {
-        if (mounted) {
-          setIsLoggedIn(false);
-          setIsAdmin(false);
-        }
-      }
+      } catch {}
     }
-    async function checkAdmin() {
+
+    async function checkAdminWithToken(token) {
       try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData?.session?.access_token || "";
         if (!token) { if (mounted) setIsAdmin(false); return; }
         const res = await fetch("/api/admin/me", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
         if (mounted) setIsAdmin(res.ok);
@@ -62,15 +48,59 @@ export default function Navbar() {
         if (mounted) setIsAdmin(false);
       }
     }
-    loadCount();
-    checkAdmin();
-    // Update on auth state change
-    const { data: sub } = supabase.auth.onAuthStateChange(() => { loadCount(); checkAdmin(); });
+
+    async function initialLoad() {
+      try {
+        const [{ data: userRes }, { data: sessionData }] = await Promise.all([
+          supabase.auth.getUser(),
+          supabase.auth.getSession(),
+        ]);
+        const user = userRes?.user || null;
+        const token = sessionData?.session?.access_token || "";
+        if (!user) {
+          if (mounted) {
+            setIsLoggedIn(false);
+            setIsAdmin(false);
+            setCartCount(0);
+          }
+        } else {
+          if (mounted) setIsLoggedIn(true);
+          await Promise.all([
+            loadCountFromUserId(user.id),
+            checkAdminWithToken(token),
+          ]);
+        }
+      } finally {
+        if (mounted) setAuthReady(true);
+      }
+    }
+
+    initialLoad();
+
+    // Update on auth state change - set state immediately to avoid UI flash
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      const hasSession = !!session;
+      setIsLoggedIn(hasSession);
+      if (!hasSession) {
+        setIsAdmin(false);
+        setCartCount(0);
+      } else {
+        const token = session?.access_token || "";
+        const userId = session?.user?.id;
+        if (userId) loadCountFromUserId(userId);
+        checkAdminWithToken(token);
+      }
+    });
     unsubAuth = () => sub.subscription.unsubscribe();
+
     // Update on custom cart events (dispatched after add-to-cart, etc.)
-    const onCartUpdated = () => loadCount();
+    const onCartUpdated = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) loadCountFromUserId(user.id);
+    };
     window.addEventListener('cart:updated', onCartUpdated);
     unsubEvent = () => window.removeEventListener('cart:updated', onCartUpdated);
+
     return () => { mounted = false; try { unsubAuth && unsubAuth(); } catch {}; try { unsubEvent && unsubEvent(); } catch {}; };
   }, []);
 
@@ -129,11 +159,18 @@ export default function Navbar() {
               {userIcon()}
             </button>
             <div className={`profile-dropdown ${menuOpen ? "open" : ""}`} role="menu">
-              {isLoggedIn ? (
+              {!authReady ? (
+                <div className="dd-skeleton">
+                  <div className="sk-line" />
+                  <div className="sk-line" />
+                  <div className="sk-line" />
+                </div>
+              ) : isLoggedIn ? (
                 <>
                   {isAdmin && <Link href="/admin" role="menuitem" className="dd-item" onClick={() => setMenuOpen(false)}>Admin</Link>}
                   <Link href="/profile" role="menuitem" className="dd-item" onClick={() => setMenuOpen(false)}>Profile</Link>
                   <Link href="/transactions" role="menuitem" className="dd-item" onClick={() => setMenuOpen(false)}>Transactions</Link>
+                  <div className="dd-sep" aria-hidden />
                   <button
                     type="button"
                     role="menuitem"
@@ -231,12 +268,24 @@ export default function Navbar() {
         border-radius: 12px;
         box-shadow: 0 10px 30px rgba(0,0,0,0.08);
         padding: 8px;
-        width: 200px;
+        width: 240px;
         opacity: 0;
         transform: translateY(-6px) scale(0.98);
         pointer-events: none;
         transition: opacity 160ms ease, transform 160ms ease;
         z-index: 60;
+      }
+      .profile-dropdown::before {
+        content: "";
+        position: absolute;
+        top: -8px;
+        right: 16px;
+        width: 14px;
+        height: 14px;
+        background: #fff;
+        border-left: 1px solid #eee;
+        border-top: 1px solid #eee;
+        transform: rotate(45deg);
       }
       .profile-dropdown.open {
         opacity: 1;
@@ -247,7 +296,7 @@ export default function Navbar() {
         display: block;
         width: 100%;
         text-align: left;
-        padding: 10px 12px;
+        padding: 12px 14px;
         border-radius: 8px;
         font-weight: 600;
         color: #2b2b2b;
@@ -255,6 +304,9 @@ export default function Navbar() {
       .dd-item:hover { background: #faf8f3; color: var(--gold-strong); }
       .dd-item.danger { color: #8b0000; }
       .dd-item.danger:hover { background: #fff2f2; color: #8b0000; }
+      .dd-sep { height: 1px; background: #f0f0f0; margin: 6px 8px; }
+      .dd-skeleton { padding: 8px 12px; }
+      .sk-line { height: 12px; background: #f2f2f2; border-radius: 6px; margin: 8px 0; }
     `}</style>
     </>
   );
