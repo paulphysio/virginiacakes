@@ -2031,6 +2031,7 @@ p {
     transform: none;
     max-width: 400px;
     margin: 0 auto;
+    transition: all 1s ease-in-out;
   }
   
   .hero-image-frame:hover {
