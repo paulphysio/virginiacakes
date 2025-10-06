@@ -661,6 +661,40 @@ export default function AdminProductsPage() {
             grid-template-columns: 1fr;
           }
         }
+        @media (max-width: 640px) {
+          .modal-overlay { padding: 0; }
+          .modal-content {
+            width: 100vw;
+            height: 100vh;
+            max-width: none;
+            max-height: none;
+            border-radius: 0;
+            display: flex;
+            flex-direction: column;
+          }
+          .modal-header {
+            position: sticky;
+            top: 0;
+            background: #fff;
+            z-index: 2;
+            padding: 16px;
+          }
+          .modal-form { 
+            padding: 16px; 
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            flex: 1;
+          }
+          .modal-actions {
+            position: sticky;
+            bottom: 0;
+            background: linear-gradient(180deg, rgba(255,255,255,0.85) 0%, #fff 40%);
+            padding: 12px 16px;
+            margin-top: 0;
+            border-top: 1px solid #f0f0f0;
+          }
+          .image-preview { max-width: 100%; }
+        }
       `}</style>
     </>
   );
