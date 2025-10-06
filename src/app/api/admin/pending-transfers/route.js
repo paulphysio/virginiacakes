@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../../lib/supabaseAdmin';
+import { requireAdmin, unauthorized } from '../_auth';
 
-export async function GET() {
+export async function GET(req) {
+  const auth = await requireAdmin(req);
+  if (!auth.ok) return unauthorized(auth.status, auth.error);
   try {
     const { data, error } = await supabaseAdmin
       .from('bank_transfers')

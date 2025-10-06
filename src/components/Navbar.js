@@ -11,6 +11,8 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -31,16 +33,39 @@ export default function Navbar() {
     async function loadCount() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { if (mounted) setCartCount(0); return; }
+        if (!user) { 
+          if (mounted) {
+            setCartCount(0);
+            setIsLoggedIn(false);
+            setIsAdmin(false);
+          }
+          return;
+        }
+        if (mounted) setIsLoggedIn(true);
         const count = await getCartCount(user.id);
         if (mounted) setCartCount(count || 0);
       } catch (e) {
-        // swallow
+        if (mounted) {
+          setIsLoggedIn(false);
+          setIsAdmin(false);
+        }
+      }
+    }
+    async function checkAdmin() {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData?.session?.access_token || "";
+        if (!token) { if (mounted) setIsAdmin(false); return; }
+        const res = await fetch("/api/admin/me", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+        if (mounted) setIsAdmin(res.ok);
+      } catch {
+        if (mounted) setIsAdmin(false);
       }
     }
     loadCount();
+    checkAdmin();
     // Update on auth state change
-    const { data: sub } = supabase.auth.onAuthStateChange(() => loadCount());
+    const { data: sub } = supabase.auth.onAuthStateChange(() => { loadCount(); checkAdmin(); });
     unsubAuth = () => sub.subscription.unsubscribe();
     // Update on custom cart events (dispatched after add-to-cart, etc.)
     const onCartUpdated = () => loadCount();
@@ -84,6 +109,7 @@ export default function Navbar() {
           <Link href="/custom-order">Custom Orders</Link>
           <Link href="/about">About Us</Link>
           <Link href="/contact">Contact</Link>
+          {isAdmin && <Link href="/admin">Admin</Link>}
         </nav>
         <div className="nav-right">
           <button className="icon-btn cart-btn" aria-label="Cart" onClick={() => router.push("/cart")}>
@@ -103,30 +129,43 @@ export default function Navbar() {
               {userIcon()}
             </button>
             <div className={`profile-dropdown ${menuOpen ? "open" : ""}`} role="menu">
-              <Link href="/profile" role="menuitem" className="dd-item" onClick={() => setMenuOpen(false)}>Profile</Link>
-              <Link href="/transactions" role="menuitem" className="dd-item" onClick={() => setMenuOpen(false)}>Transactions</Link>
-              <button
-                type="button"
-                role="menuitem"
-                className="dd-item danger"
-                onClick={async () => {
-                  try {
-                    const { error } = await supabase.auth.signOut();
-                    if (error) throw error;
-                  } catch (err) {
-                    console.error("Sign out failed:", err);
-                  } finally {
-                    setMenuOpen(false);
-                    try { router.replace("/"); router.refresh(); } catch {}
-                    // Hard fallback
-                    if (typeof window !== "undefined") {
-                      setTimeout(() => { window.location.href = "/"; }, 50);
-                    }
-                  }
-                }}
-              >
-                Sign out
-              </button>
+              {isLoggedIn ? (
+                <>
+                  {isAdmin && <Link href="/admin" role="menuitem" className="dd-item" onClick={() => setMenuOpen(false)}>Admin</Link>}
+                  <Link href="/profile" role="menuitem" className="dd-item" onClick={() => setMenuOpen(false)}>Profile</Link>
+                  <Link href="/transactions" role="menuitem" className="dd-item" onClick={() => setMenuOpen(false)}>Transactions</Link>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="dd-item danger"
+                    onClick={async () => {
+                      try {
+                        const { error } = await supabase.auth.signOut();
+                        if (error) throw error;
+                      } catch (err) {
+                        console.error("Sign out failed:", err);
+                      } finally {
+                        setMenuOpen(false);
+                        setIsLoggedIn(false);
+                        setIsAdmin(false);
+                        setCartCount(0);
+                        try { router.replace("/"); router.refresh(); } catch {}
+                        // Hard fallback
+                        if (typeof window !== "undefined") {
+                          setTimeout(() => { window.location.href = "/"; }, 50);
+                        }
+                      }
+                    }}
+                  >
+                    Sign out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" role="menuitem" className="dd-item" onClick={() => setMenuOpen(false)}>Sign In</Link>
+                  <Link href="/login" role="menuitem" className="dd-item" onClick={() => setMenuOpen(false)}>Create Account</Link>
+                </>
+              )}
             </div>
           </div>
           <button
@@ -156,6 +195,7 @@ export default function Navbar() {
           <Link className="mobile-link" href="/custom-order" onClick={() => setMobileOpen(false)}>Custom Orders</Link>
           <Link className="mobile-link" href="/about" onClick={() => setMobileOpen(false)}>About Us</Link>
           <Link className="mobile-link" href="/contact" onClick={() => setMobileOpen(false)}>Contact</Link>
+          {isAdmin && <Link className="mobile-link" href="/admin" onClick={() => setMobileOpen(false)}>Admin</Link>}
         </div>
         {/* Footer CTA removed for a cleaner, non-scroll layout */}
       </nav>

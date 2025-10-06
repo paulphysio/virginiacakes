@@ -12,6 +12,7 @@ function LoginContent() {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [mode, setMode] = useState("signin"); // or "signup"
   const search = useSearchParams();
   const router = useRouter();
@@ -28,10 +29,14 @@ function LoginContent() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccess("");
     try {
       if (mode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        setSuccess("Signed in successfully! Redirecting...");
+        const next = search.get("next");
+        setTimeout(() => router.replace(next || "/"), 500);
       } else {
         if (password !== confirmPassword) {
           throw new Error("Passwords do not match");
@@ -39,7 +44,10 @@ function LoginContent() {
         if (!fullName.trim()) {
           throw new Error("Please enter your full name");
         }
-        const { error } = await supabase.auth.signUp({
+        if (password.length < 6) {
+          throw new Error("Password must be at least 6 characters");
+        }
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -50,12 +58,20 @@ function LoginContent() {
           },
         });
         if (error) throw error;
+        
+        // Check if email confirmation is required
+        if (data?.user && !data.session) {
+          setSuccess("Account created! Please check your email to verify your account.");
+          setLoading(false);
+          return;
+        }
+        
+        setSuccess("Account created successfully! Redirecting...");
+        const next = search.get("next");
+        setTimeout(() => router.replace(next || "/"), 500);
       }
-      const next = search.get("next");
-      router.replace(next || "/");
     } catch (err) {
       setError(err?.message || "Authentication failed");
-    } finally {
       setLoading(false);
     }
   }
@@ -152,7 +168,8 @@ function LoginContent() {
                   />
                 </label>
               )}
-              {error && <div className="error">{error}</div>}
+              {error && <div className="message error-message">{error}</div>}
+              {success && <div className="message success-message">{success}</div>}
 
               <button className="btn btn-gold submit" type="submit" disabled={loading}>
                 {loading ? "Please wait..." : mode === "signin" ? "Sign In" : "Create Account"}
@@ -164,40 +181,6 @@ function LoginContent() {
                 <a className="link-like" href="/reset">Forgot your password?</a>
               </div>
             )}
-
-            <div className="oauth">
-              <div className="oauth-sep"><span>or continue with</span></div>
-              <div className="oauth-buttons">
-                <button
-                  type="button"
-                  className="oauth-btn"
-                  onClick={async () => {
-                    const next = search.get("next") || "/";
-                    await supabase.auth.signInWithOAuth({
-                      provider: "google",
-                      options: { redirectTo: window.location.origin + next },
-                    });
-                  }}
-                >
-                  <svg width="18" height="18" viewBox="0 0 256 262" xmlns="http://www.w3.org/2000/svg" aria-hidden><path fill="#EA4335" d="M255.68 133.5c0-10.6-.86-18.35-2.72-26.38H130.55v47.8h71.87c-1.45 11.9-9.3 29.8-26.7 41.86l-.24 1.6 38.78 30 2.69.27c24.65-22.77 38.73-56.27 38.73-95.15"/><path fill="#34A853" d="M130.55 261.1c35.15 0 64.72-11.6 86.3-31.58l-41.12-31.8c-11.03 7.7-25.9 13.07-45.18 13.07-34.53 0-63.83-22.75-74.28-54.27l-1.53.13-40.23 31.17-.53 1.46C35.23 231.9 79.96 261.1 130.55 261.1"/><path fill="#4A90E2" d="M56.27 156.52c-2.8-8.03-4.42-16.6-4.42-25.52 0-8.9 1.62-17.48 4.28-25.5l-.07-1.71-40.7-31.54-1.33.63C4.55 89.1 0 108.5 0 130.99c0 22.5 4.55 41.9 13.03 58.09l43.24-32.56"/><path fill="#FBBC05" d="M130.55 50.46c24.45 0 41 10.57 50.42 19.4l36.8-35.87C195.2 12.84 165.7 0 130.55 0 79.96 0 35.23 29.2 13.73 72.9l43.31 32.56c10.5-31.52 39.8-54.99 73.51-54.99"/></svg>
-                  <span>Google</span>
-                </button>
-                <button
-                  type="button"
-                  className="oauth-btn"
-                  onClick={async () => {
-                    const next = search.get("next") || "/";
-                    await supabase.auth.signInWithOAuth({
-                      provider: "apple",
-                      options: { redirectTo: window.location.origin + next },
-                    });
-                  }}
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M17.57 12.84c-.02-2.1 1.72-3.11 1.8-3.16-1-1.47-2.54-1.67-3.08-1.69-1.31-.14-2.56.77-3.22.77-.66 0-1.69-.75-2.78-.73-1.43.02-2.74.84-3.47 2.12-1.48 2.55-.38 6.31 1.06 8.38.7 1 1.52 2.12 2.61 2.09 1.06-.04 1.46-.67 2.74-.67s1.65.67 2.78.65c1.15-.02 1.88-1.02 2.58-2.02.81-1.17 1.15-2.31 1.17-2.37-.02-.01-2.25-.86-2.27-3.37zM15.5 5.92c.58-.7.97-1.68.86-2.65-.83.03-1.85.55-2.45 1.24-.54.62-1.01 1.61-.88 2.56.93.07 1.89-.47 2.47-1.15z" fill="#000"/></svg>
-                  <span>Apple</span>
-                </button>
-              </div>
-            </div>
 
             <div className="switch">
               {mode === "signin" ? (
@@ -262,19 +245,28 @@ function LoginContent() {
           background: #fff;
         }
         .input:focus { border-color: var(--gold-strong); box-shadow: 0 0 0 3px rgba(199,166,90,0.12); }
-        .error { color: #b00020; font-size: 0.9rem; }
+        .message { 
+          padding: 12px 16px; 
+          border-radius: 10px; 
+          font-size: 0.9rem; 
+          font-weight: 600;
+        }
+        .error-message { 
+          background: #fee2e2; 
+          color: #991b1b; 
+          border: 1px solid #fecaca;
+        }
+        .success-message { 
+          background: #d1fae5; 
+          color: #065f46; 
+          border: 1px solid #a7f3d0;
+        }
         .submit { width: 100%; margin-top: 4px; }
         .switch { margin-top: 10px; font-size: 0.95rem; }
         .link-like { background: none; border: none; color: var(--gold-strong); font-weight: 600; cursor: pointer; }
         .link-like:hover { color: var(--gold); }
 
         .aux-actions { margin-top: 10px; }
-        .oauth { margin-top: 18px; }
-        .oauth-sep { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center; color: #777; font-size: 0.9rem; }
-        .oauth-sep::before, .oauth-sep::after { content: ""; height: 1px; background: #eee; display: block; }
-        .oauth-buttons { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .oauth-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid #e5e5e5; border-radius: 10px; background: #fff; padding: 10px 12px; font-weight: 600; }
-        .oauth-btn:hover { border-color: #d9d9d9; }
 
         @media (max-width: 900px) {
           .auth-card { grid-template-columns: 1fr; }

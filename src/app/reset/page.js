@@ -69,8 +69,8 @@ function ResetContent() {
                 <span>Email</span>
                 <input className="input" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
               </label>
-              {error && <div style={{ color: "#b00020", fontSize: 14 }}>{error}</div>}
-              {message && <div className="muted" style={{ fontSize: 14 }}>{message}</div>}
+              {error && <div className="message error-message">{error}</div>}
+              {message && <div className="message success-message">{message}</div>}
               <button className="btn btn-gold" type="submit" disabled={loading}>{loading ? "Please wait..." : "Send reset link"}</button>
             </form>
           ) : (
@@ -83,13 +83,32 @@ function ResetContent() {
                 <span>Confirm Password</span>
                 <input className="input" type="password" minLength={6} required value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Re-enter new password" />
               </label>
-              {error && <div style={{ color: "#b00020", fontSize: 14 }}>{error}</div>}
-              {message && <div className="muted" style={{ fontSize: 14 }}>{message}</div>}
+              {error && <div className="message error-message">{error}</div>}
+              {message && <div className="message success-message">{message}</div>}
               <button className="btn btn-gold" type="submit" disabled={loading}>{loading ? "Please wait..." : "Update password"}</button>
             </form>
           )}
         </div>
       </div>
+
+      <style jsx>{`
+        .message { 
+          padding: 12px 16px; 
+          border-radius: 10px; 
+          font-size: 0.9rem; 
+          font-weight: 600;
+        }
+        .error-message { 
+          background: #fee2e2; 
+          color: #991b1b; 
+          border: 1px solid #fecaca;
+        }
+        .success-message { 
+          background: #d1fae5; 
+          color: #065f46; 
+          border: 1px solid #a7f3d0;
+        }
+      `}</style>
     </section>
   );
 }

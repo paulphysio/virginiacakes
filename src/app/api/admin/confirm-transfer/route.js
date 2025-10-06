@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../../lib/supabaseAdmin';
 import nodemailer from 'nodemailer';
+import { requireAdmin, unauthorized } from '../_auth';
 
 // Email sending
 async function sendEmail({ to, subject, html }) {
@@ -36,6 +37,8 @@ async function sendEmail({ to, subject, html }) {
 }
 
 export async function POST(req) {
+  const auth = await requireAdmin(req);
+  if (!auth.ok) return unauthorized(auth.status, auth.error);
   try {
     const body = await req.json();
     const { transferId } = body || {};

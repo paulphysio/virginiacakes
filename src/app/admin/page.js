@@ -1,36 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
+import Link from "next/link";
 
-export default function AdminPage() {
+export default function AdminDashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [user, setUser] = useState(null);
-  const [categories, setCategories] = useState([]);
-
-  // Form state
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
-  const [categorySlug, setCategorySlug] = useState("");
-  const [rating, setRating] = useState("");
-  const [isShow, setIsShow] = useState(true);
-  const [isActive, setIsActive] = useState(true);
-  const fileRef = useRef(null);
-  const [previewUrl, setPreviewUrl] = useState("");
-
-  useEffect(() => {
-    // Mark body to disable any site-wide overlays while on admin page
-    document.body.classList.add("admin-page");
-    // Ensure scrolling allowed in case mobile menu had locked it
-    document.body.classList.remove("no-scroll");
-    return () => {
-      document.body.classList.remove("admin-page");
-    };
-  }, []);
+  const [accessToken, setAccessToken] = useState("");
+  const [stats, setStats] = useState(null);
+  const [recentOrders, setRecentOrders] = useState([]);
 
   useEffect(() => {
     (async () => {
@@ -39,181 +19,287 @@ export default function AdminPage() {
         router.replace("/login?next=/admin");
         return;
       }
-      setUser(user);
-      // Load categories
-      const { data } = await supabase
-        .from("categories")
-        .select("slug, name, image_url, position")
-        .order("position", { ascending: true });
-      const cats = data || [];
-      setCategories(cats);
-      if (cats.length > 0) setCategorySlug(cats[0].slug);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token || "";
+      if (!token) {
+        router.replace("/login?next=/admin");
+        return;
+      }
+      const res = await fetch("/api/admin/me", {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        router.replace("/login");
+        return;
+      }
+      setAccessToken(token);
+      await loadStats(token);
       setLoading(false);
     })();
   }, [router]);
 
-  function onFileChange(e) {
-    const f = e.target.files?.[0];
-    if (f) setPreviewUrl(URL.createObjectURL(f));
-    else setPreviewUrl("");
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (!name || !price || !categorySlug) {
-      alert("Please fill in name, price and category.");
-      return;
-    }
-    const cat = categories.find((c) => c.slug === categorySlug);
-    if (!cat) {
-      alert("Selected category not found.");
-      return;
-    }
-
-    setSaving(true);
+  async function loadStats(token) {
     try {
-      // 1) Upload image if any
-      let imageUrl = cat.image_url || "";
-      const file = fileRef.current?.files?.[0];
-      if (file) {
-        const path = `${Date.now()}-${file.name}`.replace(/\s+/g, "-");
-        const { data: up, error: upErr } = await supabase.storage
-          .from("product-images")
-          .upload(path, file, { upsert: false, contentType: file.type });
-        if (upErr) throw upErr;
-        const { data: pub } = supabase.storage
-          .from("product-images")
-          .getPublicUrl(up.path);
-        imageUrl = pub?.publicUrl || imageUrl;
+      const res = await fetch("/api/admin/stats", {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      const json = await res.json();
+      if (res.ok) {
+        setStats(json.stats);
+        setRecentOrders(json.recentOrders || []);
       }
-
-      // 2) Insert product
-      const priceInt = parseInt(price, 10) || 0;
-      const ratingNum = rating ? Math.min(5, Math.max(0, parseFloat(rating))) : null;
-
-      const { error: insErr } = await supabase
-        .from("products")
-        .insert({
-          name,
-          description,
-          image_url: imageUrl,
-          price_naira: priceInt,
-          rating: ratingNum,
-          views: 0,
-          is_active: isActive,
-          is_show: isShow,
-          category_slug: cat.slug,
-          category: cat.name,
-          type: cat.name,
-        });
-      if (insErr) throw insErr;
-
-      alert("Product created successfully.");
-      // Reset form
-      setName("");
-      setDescription("");
-      setPrice("");
-      setRating("");
-      setIsShow(true);
-      setIsActive(true);
-      if (fileRef.current) fileRef.current.value = "";
-      setPreviewUrl("");
-    } catch (err) {
-      console.error(err);
-      alert(err?.message || "Failed to create product. Please try again.");
-    } finally {
-      setSaving(false);
+    } catch (e) {
+      console.error("Failed to load stats:", e);
     }
   }
 
   if (loading) {
-    return (
-      <section className="section">
-        <div className="container">
-          <div className="card" style={{ padding: 20, textAlign: "center" }}>Loading...</div>
-        </div>
-      </section>
-    );
+    return <div style={{ padding: 40, textAlign: "center" }}>Loading dashboard...</div>;
   }
 
+  const statCards = [
+    { label: "Total Products", value: stats?.totalProducts || 0, icon: "🎂", color: "#D4AF37" },
+    { label: "Total Orders", value: stats?.totalOrders || 0, icon: "📦", color: "#4F46E5" },
+    { label: "Paid Orders", value: stats?.paidOrders || 0, icon: "✅", color: "#10B981" },
+    { label: "Pending Transfers", value: stats?.pendingTransfers || 0, icon: "⏳", color: "#F59E0B" },
+    { label: "Total Revenue", value: `₦${(stats?.totalRevenue || 0).toLocaleString("en-NG")}`, icon: "💰", color: "#8B5CF6" },
+    { label: "Categories", value: stats?.totalCategories || 0, icon: "📂", color: "#EC4899" },
+  ];
+
   return (
-    <section className="section">
-      <div className="container">
-        <h2 className="section-title">Admin – Add Product</h2>
-        <div className="card" style={{ padding: 20 }}>
-          <form onSubmit={handleSubmit} style={{ display: "grid", gap: 14 }}>
-            <div style={{ display: "grid", gap: 6 }}>
-              <label htmlFor="name"><strong>Name</strong></label>
-              <input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Classic Belgian Waffle" required style={inputStyle} />
-            </div>
-
-            <div style={{ display: "grid", gap: 6 }}>
-              <label htmlFor="desc"><strong>Description</strong></label>
-              <textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Short description" rows={3} style={textareaStyle} />
-            </div>
-
-            <div style={{ display: "grid", gap: 6 }}>
-              <label htmlFor="price"><strong>Price (₦)</strong></label>
-              <input id="price" type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="e.g. 20000" required style={inputStyle} />
-            </div>
-
-            <div style={{ display: "grid", gap: 6 }}>
-              <label htmlFor="rating"><strong>Rating (0-5, optional)</strong></label>
-              <input id="rating" type="number" min="0" max="5" step="0.1" value={rating} onChange={(e) => setRating(e.target.value)} placeholder="e.g. 4.8" style={inputStyle} />
-            </div>
-
-            <div style={{ display: "grid", gap: 6 }}>
-              <label htmlFor="category"><strong>Category</strong></label>
-              <select id="category" value={categorySlug} onChange={(e) => setCategorySlug(e.target.value)} style={inputStyle}>
-                {categories.map((c) => (
-                  <option key={c.slug} value={c.slug}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div style={{ display: "grid", gap: 6 }}>
-              <label htmlFor="image"><strong>Product Image</strong></label>
-              <input id="image" type="file" accept="image/*" ref={fileRef} onChange={onFileChange} style={inputStyle} />
-              {previewUrl ? (
-                <img src={previewUrl} alt="Preview" style={{ maxWidth: 240, borderRadius: 12, marginTop: 8 }} />
-              ) : null}
-            </div>
-
-            <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input type="checkbox" checked={isShow} onChange={(e) => setIsShow(e.target.checked)} />
-                <span>Featured (show on homepage)</span>
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
-                <span>Active (available for order)</span>
-              </label>
-            </div>
-
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button type="submit" className="btn btn-gold" disabled={saving}>{saving ? "Saving..." : "Create Product"}</button>
-              <button type="button" className="btn btn-outline" onClick={() => router.push("/categories")}>View Categories</button>
-            </div>
-          </form>
-        </div>
-        <p className="micro muted" style={{ marginTop: 10 }}>
-          Images upload to the &quot;product-images&quot; bucket. Product records are inserted into the &quot;products&quot; table with selected category metadata.
-        </p>
+    <>
+      <div className="admin-header">
+        <h1>Dashboard</h1>
+        <p>Welcome to your admin panel</p>
       </div>
-    </section>
+
+      <div className="stats-grid">
+        {statCards.map((card, i) => (
+          <div key={i} className="stat-card" style={{ borderLeftColor: card.color }}>
+            <div className="stat-icon" style={{ background: `${card.color}15` }}>{card.icon}</div>
+            <div className="stat-content">
+              <div className="stat-label">{card.label}</div>
+              <div className="stat-value">{card.value}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="admin-section">
+        <div className="section-header">
+          <h2>Quick Actions</h2>
+        </div>
+        <div className="quick-actions">
+          <Link href="/admin/products" className="action-card">
+            <span className="action-icon">🎂</span>
+            <span className="action-label">Manage Products</span>
+          </Link>
+          <Link href="/admin/transfers" className="action-card">
+            <span className="action-icon">💳</span>
+            <span className="action-label">Approve Transfers</span>
+          </Link>
+          <Link href="/admin/all-orders" className="action-card">
+            <span className="action-icon">📦</span>
+            <span className="action-label">View Orders</span>
+          </Link>
+        </div>
+      </div>
+
+      {recentOrders.length > 0 && (
+        <div className="admin-section">
+          <div className="section-header">
+            <h2>Recent Orders</h2>
+            <Link href="/admin/all-orders" className="btn btn-outline btn-sm">View All</Link>
+          </div>
+          <div className="orders-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Date</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentOrders.map((order) => (
+                  <tr key={order.id}>
+                    <td><code>{String(order.id).slice(0, 8)}</code></td>
+                    <td>{new Date(order.created_at).toLocaleDateString()}</td>
+                    <td>₦{((order.total_cents || 0) / 100).toLocaleString("en-NG")}</td>
+                    <td><span className={`status-badge status-${order.status}`}>{order.status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        .admin-header {
+          margin-bottom: 32px;
+        }
+        .admin-header h1 {
+          margin: 0 0 4px 0;
+          font-size: 32px;
+          font-weight: 700;
+          color: #1f2937;
+        }
+        .admin-header p {
+          margin: 0;
+          color: #6b7280;
+          font-size: 16px;
+        }
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+          gap: 20px;
+          margin-bottom: 32px;
+        }
+        .stat-card {
+          background: #fff;
+          border-radius: 12px;
+          padding: 20px;
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          border-left: 4px solid;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .stat-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .stat-icon {
+          width: 48px;
+          height: 48px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 24px;
+        }
+        .stat-content {
+          flex: 1;
+        }
+        .stat-label {
+          font-size: 13px;
+          color: #6b7280;
+          font-weight: 600;
+          margin-bottom: 4px;
+        }
+        .stat-value {
+          font-size: 24px;
+          font-weight: 700;
+          color: #1f2937;
+        }
+        .admin-section {
+          background: #fff;
+          border-radius: 12px;
+          padding: 24px;
+          margin-bottom: 24px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .section-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 20px;
+        }
+        .section-header h2 {
+          margin: 0;
+          font-size: 20px;
+          font-weight: 700;
+          color: #1f2937;
+        }
+        .quick-actions {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 16px;
+        }
+        .action-card {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          padding: 24px;
+          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+          border-radius: 12px;
+          text-decoration: none;
+          transition: all 0.2s ease;
+          border: 2px solid transparent;
+        }
+        .action-card:hover {
+          background: linear-gradient(135deg, #D4AF37 0%, #F4E5C3 100%);
+          border-color: #D4AF37;
+          transform: translateY(-4px);
+          box-shadow: 0 8px 16px rgba(212, 175, 55, 0.3);
+        }
+        .action-icon {
+          font-size: 36px;
+        }
+        .action-label {
+          font-size: 16px;
+          font-weight: 600;
+          color: #1f2937;
+        }
+        .orders-table {
+          overflow-x: auto;
+        }
+        .orders-table table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        .orders-table th {
+          text-align: left;
+          padding: 12px;
+          background: #f8f9fa;
+          font-weight: 600;
+          color: #6b7280;
+          font-size: 14px;
+          border-bottom: 2px solid #e5e7eb;
+        }
+        .orders-table td {
+          padding: 12px;
+          border-bottom: 1px solid #e5e7eb;
+          color: #1f2937;
+        }
+        .orders-table tr:hover {
+          background: #f8f9fa;
+        }
+        .status-badge {
+          display: inline-block;
+          padding: 4px 12px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 600;
+          text-transform: capitalize;
+        }
+        .status-paid {
+          background: #d1fae5;
+          color: #065f46;
+        }
+        .status-pending {
+          background: #fef3c7;
+          color: #92400e;
+        }
+        .btn-sm {
+          padding: 8px 16px;
+          font-size: 14px;
+        }
+        @media (max-width: 768px) {
+          .stats-grid {
+            grid-template-columns: 1fr;
+          }
+          .quick-actions {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+    </>
   );
 }
-
-const inputStyle = {
-  padding: "10px 12px",
-  border: "1px solid #eee",
-  borderRadius: 10,
-  outline: "none",
-};
-
-const textareaStyle = {
-  padding: "10px 12px",
-  border: "1px solid #eee",
-  borderRadius: 10,
-  outline: "none",
-};

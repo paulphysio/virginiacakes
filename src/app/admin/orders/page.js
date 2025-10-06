@@ -8,6 +8,7 @@ export default function AdminOrdersApprovalPage() {
   const router = useRouter();
   const [authChecked, setAuthChecked] = useState(false);
   const [user, setUser] = useState(null);
+  const [accessToken, setAccessToken] = useState("");
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState([]);
   const [error, setError] = useState("");
@@ -21,6 +22,23 @@ export default function AdminOrdersApprovalPage() {
         router.replace("/login?next=/admin/orders");
         return;
       }
+      // get session token
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token || "";
+      // verify admin server-side
+      if (!token) {
+        router.replace("/login?next=/admin/orders");
+        return;
+      }
+      const res = await fetch("/api/admin/me", {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        router.replace("/login");
+        return;
+      }
+      setAccessToken(token);
       setUser(user);
       setAuthChecked(true);
     })();
@@ -35,7 +53,10 @@ export default function AdminOrdersApprovalPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/admin/pending-transfers", { cache: "no-store" });
+      const res = await fetch("/api/admin/pending-transfers", {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed to load pending transfers");
       setPending(json.data || []);
@@ -54,7 +75,7 @@ export default function AdminOrdersApprovalPage() {
     try {
       const res = await fetch("/api/admin/confirm-transfer", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({ transferId }),
       });
       const json = await res.json();
