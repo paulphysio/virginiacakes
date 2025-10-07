@@ -57,6 +57,37 @@ export default function AdminProductsPage() {
     })();
   }, [router]);
 
+  // Prevent background scroll when modal is open (mobile-safe)
+  useEffect(() => {
+    if (showAddModal) {
+      document?.body?.classList?.add("no-scroll");
+    } else {
+      document?.body?.classList?.remove("no-scroll");
+    }
+    return () => document?.body?.classList?.remove("no-scroll");
+  }, [showAddModal]);
+
+  // JS fallback for Android: set --app-vh to window.innerHeight when modal opens
+  useEffect(() => {
+    if (!showAddModal) return;
+    const setVH = () => {
+      if (typeof window === 'undefined') return;
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--app-vh', `${vh}px`);
+    };
+    setVH();
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    window.addEventListener('resize', setVH);
+    window.addEventListener('orientationchange', setVH);
+    if (vv) vv.addEventListener('resize', setVH);
+    return () => {
+      window.removeEventListener('resize', setVH);
+      window.removeEventListener('orientationchange', setVH);
+      if (vv) vv.removeEventListener('resize', setVH);
+      document.documentElement.style.removeProperty('--app-vh');
+    };
+  }, [showAddModal]);
+
   async function loadCategories() {
     const { data } = await supabase
       .from("categories")
@@ -387,6 +418,12 @@ export default function AdminProductsPage() {
         </div>
       )}
 
+      <style jsx global>{`
+        body.no-scroll {
+          overflow: hidden;
+          touch-action: none;
+        }
+      `}</style>
       <style jsx>{`
         .admin-header {
           display: flex;
@@ -662,15 +699,25 @@ export default function AdminProductsPage() {
           }
         }
         @media (max-width: 640px) {
-          .modal-overlay { padding: 0; }
+          .modal-overlay { 
+            padding: 0; 
+            inset: 0; 
+            align-items: stretch; 
+            justify-content: stretch;
+          }
           .modal-content {
             width: 100vw;
+            /* fallback then dynamic viewport for Android/Chrome */
             height: 100vh;
+            height: 100svh;
+            height: 100dvh;
+            height: calc(var(--app-vh, 1vh) * 100);
             max-width: none;
             max-height: none;
             border-radius: 0;
             display: flex;
             flex-direction: column;
+            overscroll-behavior: contain;
           }
           .modal-header {
             position: sticky;
@@ -678,18 +725,21 @@ export default function AdminProductsPage() {
             background: #fff;
             z-index: 2;
             padding: 16px;
+            padding-top: calc(16px + env(safe-area-inset-top, 0px));
           }
           .modal-form { 
             padding: 16px; 
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             flex: 1;
+            min-height: 0;
           }
           .modal-actions {
             position: sticky;
             bottom: 0;
             background: linear-gradient(180deg, rgba(255,255,255,0.85) 0%, #fff 40%);
             padding: 12px 16px;
+            padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
             margin-top: 0;
             border-top: 1px solid #f0f0f0;
           }
