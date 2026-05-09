@@ -156,12 +156,16 @@ export default function Home() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [catSlidesPerView, setCatSlidesPerView] = useState(1);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
 
   // Signature Creations carousel
   const sigCarouselRef = useRef(null);
   const [sigIndex, setSigIndex] = useState(0);
   const [sigAuto, setSigAuto] = useState(true);
   const [sigSlidesPerView, setSigSlidesPerView] = useState(1);
+  const [sigTouchStart, setSigTouchStart] = useState(null);
+  const [sigTouchEnd, setSigTouchEnd] = useState(null);
 
   // Responsive slides per view for Signature carousel
   useEffect(() => {
@@ -222,6 +226,44 @@ export default function Home() {
 
   const sigNext = () => sigGoTo(sigIndex + 1);
   const sigPrev = () => sigGoTo(sigIndex - 1);
+
+  // Touch handling for categories carousel
+  const handleTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+    if (isLeftSwipe) nextSlide();
+    if (isRightSwipe) prevSlide();
+  };
+
+  // Touch handling for signature carousel
+  const handleSigTouchStart = (e) => {
+    setSigTouchEnd(null);
+    setSigTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleSigTouchMove = (e) => {
+    setSigTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleSigTouchEnd = () => {
+    if (!sigTouchStart || !sigTouchEnd) return;
+    const distance = sigTouchStart - sigTouchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+    if (isLeftSwipe) sigNext();
+    if (isRightSwipe) sigPrev();
+  };
 
   // Signature autoplay
   useEffect(() => {
@@ -379,6 +421,9 @@ export default function Home() {
 
   return (
     <div className="luxe-page">
+      {/* Scroll Progress Indicator */}
+      <div className="scroll-progress" />
+      
       {/* Hero Section */}
       <section id="home" className="hero">
         <div className="container hero-grid">
@@ -420,7 +465,13 @@ export default function Home() {
             </div>
           ) : (
             <div className="carousel-container categories-carousel">
-              <div className="carousel-wrapper" ref={carouselRef}>
+              <div 
+                className="carousel-wrapper" 
+                ref={carouselRef}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+              >
                 <div 
                   className="carousel-track" 
                   style={{ transform: `translateX(-${currentIndex * (100 / catSlidesPerView)}%)` }}
@@ -467,6 +518,10 @@ export default function Home() {
         </div>
       </section>
 
+      <div className="section-divider reveal fade-in">
+        <div className="section-divider-icon"></div>
+      </div>
+
       {/* Signature Creations */}
       <section id="cakes" className="section signature-creations">
         <div className="container">
@@ -501,7 +556,13 @@ export default function Home() {
             </div>
           ) : (
             <div className="carousel-container signature-creations">
-              <div className="carousel-wrapper" ref={sigCarouselRef}>
+              <div 
+                className="carousel-wrapper" 
+                ref={sigCarouselRef}
+                onTouchStart={handleSigTouchStart}
+                onTouchMove={handleSigTouchMove}
+                onTouchEnd={handleSigTouchEnd}
+              >
                 <div 
                   className="carousel-track" 
                   style={{ transform: `translateX(-${sigIndex * (100 / sigSlidesPerView)}%)` }}
@@ -533,6 +594,10 @@ export default function Home() {
           )}
         </div>
       </section>
+
+      <div className="section-divider reveal fade-in">
+        <div className="section-divider-icon"></div>
+      </div>
 
       {/* Bespoke Creations */}
       <section className="section bespoke-section">
