@@ -105,7 +105,7 @@ export default function Home() {
     // Do NOT override custom-cake per requirement
     "foil-cake": `${STORAGE_BASE}/foil-cakes.jfif`,
     "cupcakes": `${STORAGE_BASE}/cupcake2.jfif`,
-    "bento": `${STORAGE_BASE}/bento1.jfif`,
+    "bento": `${STORAGE_BASE}/bento2.jfif`,
     "cakelets": `${STORAGE_BASE}/cakelets-collection.jfif`,
     "banana-bread": `${STORAGE_BASE}/banana-bread-collections2.jfif`,
     "food-tray": `${STORAGE_BASE}/food-tray-collection.jfif`,
@@ -744,7 +744,7 @@ export default function Home() {
             <h4>Contact</h4>
             <ul className="muted">
               <li>+234 708 345 3202</li>
-              <li>support@virginiascakes.com</li>
+              <li>VirginiasCakes@gmail.com</li>
             </ul>
           </div>
           <div>

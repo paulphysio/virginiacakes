@@ -47,9 +47,9 @@ function CheckoutContent() {
   }, [router, load]);
 
   // ====== Bank Account Details (Static) ======
-  const ACCOUNT_NUMBER = "1001622115";
-  const BANK_NAME = "VFD Microfinance Bank";
-  const ACCOUNT_NAME = "Athanesius Virginia Ezindu";
+  const ACCOUNT_NUMBER = "6423166659";
+  const BANK_NAME = "Opay";
+  const ACCOUNT_NAME = "VIRGINIA S CAKES & CONFECTIONERY";
   // TODO: Set your WhatsApp number in full international format without '+' e.g. 2348012345678
   const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || ""; // e.g. 2348012345678
 
