@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
 import { addItemByProductId } from "../lib/cart";
+import { useTikTokTracking } from "../hooks/useTikTokTracking";
 
 const MobileCTA = () => {
   const [mounted, setMounted] = useState(false);
@@ -70,6 +71,7 @@ export default function Home() {
   const [featuredError, setFeaturedError] = useState("");
   const [featuredLoading, setFeaturedLoading] = useState(true);
   const router = useRouter();
+  const { trackViewContent, trackAddToCart, identifyUser } = useTikTokTracking();
 
   // Normalize featured list for rendering
   const displayProds = useMemo(() => Array.isArray(featured) ? featured : [], [featured]);
@@ -394,9 +396,18 @@ export default function Home() {
     })();
   }, []);
 
+  // Track ViewContent for featured products when they load
+  useEffect(() => {
+    if (!featuredLoading && displayProds.length > 0) {
+      displayProds.forEach(async (product) => {
+        await trackViewContent(product);
+      });
+    }
+  }, [featuredLoading, displayProds, trackViewContent]);
+
   
 
-  async function handleOrder(product) {
+  const handleOrder = async (product) => {
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -407,6 +418,19 @@ export default function Home() {
     try {
       await addItemByProductId(user.id, product.id, 1);
       alert(`Added '${product.name || product.title}' to cart.`);
+      
+      // TikTok tracking - AddToCart
+      await trackAddToCart(product);
+      
+      // Identify user with TikTok if we have user data
+      if (user.email) {
+        await identifyUser({
+          email: user.email,
+          phone: user.phone,
+          external_id: user.id
+        });
+      }
+      
       try {
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('cart:updated'));
