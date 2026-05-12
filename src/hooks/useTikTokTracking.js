@@ -33,6 +33,36 @@ export const useTikTokTracking = () => {
     }
   };
 
+  const trackAddToWishlist = async (product) => {
+    try {
+      if (typeof window !== 'undefined' && window.tiktokTrack) {
+        await window.tiktokTrack.trackAddToWishlist(product);
+      }
+    } catch (error) {
+      console.error('TikTok AddToWishlist tracking error:', error);
+    }
+  };
+
+  const trackSearch = async (searchQuery) => {
+    try {
+      if (typeof window !== 'undefined' && window.tiktokTrack) {
+        await window.tiktokTrack.trackSearch(searchQuery);
+      }
+    } catch (error) {
+      console.error('TikTok Search tracking error:', error);
+    }
+  };
+
+  const trackAddPaymentInfo = async (items, totalValue) => {
+    try {
+      if (typeof window !== 'undefined' && window.tiktokTrack) {
+        await window.tiktokTrack.trackAddPaymentInfo(items, totalValue);
+      }
+    } catch (error) {
+      console.error('TikTok AddPaymentInfo tracking error:', error);
+    }
+  };
+
   const trackInitiateCheckout = async (items, totalValue) => {
     try {
       if (typeof window !== 'undefined' && window.tiktokTrack) {
@@ -43,13 +73,13 @@ export const useTikTokTracking = () => {
     }
   };
 
-  const trackPurchase = async (items, totalValue) => {
+  const trackPlaceAnOrder = async (items, totalValue) => {
     try {
       if (typeof window !== 'undefined' && window.tiktokTrack) {
-        await window.tiktokTrack.trackPurchase(items, totalValue);
+        await window.tiktokTrack.trackPlaceAnOrder(items, totalValue);
       }
     } catch (error) {
-      console.error('TikTok Purchase tracking error:', error);
+      console.error('TikTok PlaceAnOrder tracking error:', error);
     }
   };
 
@@ -63,13 +93,13 @@ export const useTikTokTracking = () => {
     }
   };
 
-  const trackSearch = async (searchQuery) => {
+  const trackPurchase = async (items, totalValue) => {
     try {
       if (typeof window !== 'undefined' && window.tiktokTrack) {
-        await window.tiktokTrack.trackSearch(searchQuery);
+        await window.tiktokTrack.trackPurchase(items, totalValue);
       }
     } catch (error) {
-      console.error('TikTok Search tracking error:', error);
+      console.error('TikTok Purchase tracking error:', error);
     }
   };
 
@@ -86,10 +116,13 @@ export const useTikTokTracking = () => {
   return {
     trackViewContent,
     trackAddToCart,
-    trackInitiateCheckout,
-    trackPurchase,
-    trackCompleteRegistration,
+    trackAddToWishlist,
     trackSearch,
+    trackAddPaymentInfo,
+    trackInitiateCheckout,
+    trackPlaceAnOrder,
+    trackCompleteRegistration,
+    trackPurchase,
     identifyUser,
   };
 };
