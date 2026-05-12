@@ -59,183 +59,219 @@ export default function RootLayout({ children }) {
         <Script id="tiktok-tracking-utils" strategy="afterInteractive">
           {`
             // Wait for TikTok pixel to be fully loaded
-            setTimeout(function() {
-              // Utility function for SHA-256 hashing
-              window.hashWithSHA256 = async function(data) {
-                if (!data) return null;
-                try {
-                  const encoder = new TextEncoder();
-                  const dataUint8Array = encoder.encode(data.toLowerCase().trim());
-                  const hashBuffer = await crypto.subtle.digest('SHA-256', dataUint8Array);
-                  const hashArray = Array.from(new Uint8Array(hashBuffer));
-                  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-                } catch (error) {
-                  console.error('Error hashing data:', error);
-                  return null;
-                }
-              };
-              
-              // TikTok tracking functions matching TikTok's exact format
-              window.tiktokTrack = {
-                pixelId: 'D81ERCRC77UEKU3Q50SG',
+            var checkPixelLoaded = setInterval(function() {
+              if (typeof ttq !== 'undefined' && ttq.instance && ttq.load) {
+                clearInterval(checkPixelLoaded);
                 
-                // Identify user with hashed data
-                identify: async function(userData) {
-                  if (typeof ttq === 'undefined') return;
-                  
-                  const hashedData = {};
-                  if (userData.email) {
-                    hashedData.email = await window.hashWithSHA256(userData.email);
+                // Utility function for SHA-256 hashing
+                window.hashWithSHA256 = async function(data) {
+                  if (!data) return null;
+                  try {
+                    const encoder = new TextEncoder();
+                    const dataUint8Array = encoder.encode(data.toLowerCase().trim());
+                    const hashBuffer = await crypto.subtle.digest('SHA-256', dataUint8Array);
+                    const hashArray = Array.from(new Uint8Array(hashBuffer));
+                    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                  } catch (error) {
+                    console.error('Error hashing data:', error);
+                    return null;
                   }
-                  if (userData.phone) {
-                    hashedData.phone_number = await window.hashWithSHA256(userData.phone);
+                };
+                
+                // TikTok tracking functions matching TikTok's exact format
+                window.tiktokTrack = {
+                  pixelId: 'D81ERCRC77UEKU3Q50SG',
+                  
+                  // Get pixel instance
+                  getPixel: function() {
+                    return ttq.instance(this.pixelId);
+                  },
+                  
+                  // Identify user with hashed data
+                  identify: async function(userData) {
+                    if (typeof ttq === 'undefined') return;
+                    
+                    const hashedData = {};
+                    if (userData.email) {
+                      hashedData.email = await window.hashWithSHA256(userData.email);
+                    }
+                    if (userData.phone) {
+                      hashedData.phone_number = await window.hashWithSHA256(userData.phone);
+                    }
+                    if (userData.external_id) {
+                      hashedData.external_id = await window.hashWithSHA256(userData.external_id);
+                    }
+                    
+                    ttq.identify(hashedData);
+                  },
+                  
+                  // Track ViewContent
+                  trackViewContent: function(product) {
+                    if (typeof ttq === 'undefined') return;
+                    
+                    const pixel = this.getPixel();
+                    if (pixel) {
+                      pixel.track('ViewContent', {
+                        contents: [{
+                          content_id: product.id || product.slug || '',
+                          content_type: 'product',
+                          content_name: product.name || product.title || ''
+                        }],
+                        value: product.price_naira || product.price || 0,
+                        currency: 'NGN'
+                      }, { event_id: 'view_content_' + (product.id || product.slug || '') + '_' + Date.now() });
+                    }
+                  },
+                  
+                  // Track AddToCart
+                  trackAddToCart: function(product) {
+                    if (typeof ttq === 'undefined') return;
+                    
+                    const pixel = this.getPixel();
+                    if (pixel) {
+                      pixel.track('AddToCart', {
+                        contents: [{
+                          content_id: product.id || product.slug || '',
+                          content_type: 'product',
+                          content_name: product.name || product.title || ''
+                        }],
+                        value: product.price_naira || product.price || 0,
+                        currency: 'NGN'
+                      }, { event_id: 'add_to_cart_' + (product.id || product.slug || '') + '_' + Date.now() });
+                    }
+                  },
+                  
+                  // Track AddToWishlist
+                  trackAddToWishlist: function(product) {
+                    if (typeof ttq === 'undefined') return;
+                    
+                    const pixel = this.getPixel();
+                    if (pixel) {
+                      pixel.track('AddToWishlist', {
+                        contents: [{
+                          content_id: product.id || product.slug || '',
+                          content_type: 'product',
+                          content_name: product.name || product.title || ''
+                        }],
+                        value: product.price_naira || product.price || 0,
+                        currency: 'NGN'
+                      }, { event_id: 'add_to_wishlist_' + (product.id || product.slug || '') + '_' + Date.now() });
+                    }
+                  },
+                  
+                  // Track Search
+                  trackSearch: function(searchQuery) {
+                    if (typeof ttq === 'undefined') return;
+                    
+                    const pixel = this.getPixel();
+                    if (pixel) {
+                      pixel.track('Search', {
+                        contents: [],
+                        value: 0,
+                        currency: 'NGN',
+                        search_string: searchQuery || ''
+                      }, { event_id: 'search_' + Date.now() });
+                    }
+                  },
+                  
+                  // Track AddPaymentInfo
+                  trackAddPaymentInfo: function(items, totalValue) {
+                    if (typeof ttq === 'undefined') return;
+                    
+                    const pixel = this.getPixel();
+                    if (pixel) {
+                      const contents = items.map(item => ({
+                        content_id: item.id || item.slug || '',
+                        content_type: 'product',
+                        content_name: item.name || item.title || ''
+                      }));
+                      
+                      pixel.track('AddPaymentInfo', {
+                        contents: contents,
+                        value: totalValue || 0,
+                        currency: 'NGN'
+                      }, { event_id: 'add_payment_info_' + Date.now() });
+                    }
+                  },
+                  
+                  // Track InitiateCheckout
+                  trackInitiateCheckout: function(items, totalValue) {
+                    if (typeof ttq === 'undefined') return;
+                    
+                    const pixel = this.getPixel();
+                    if (pixel) {
+                      const contents = items.map(item => ({
+                        content_id: item.id || item.slug || '',
+                        content_type: 'product',
+                        content_name: item.name || item.title || ''
+                      }));
+                      
+                      pixel.track('InitiateCheckout', {
+                        contents: contents,
+                        value: totalValue || 0,
+                        currency: 'NGN'
+                      }, { event_id: 'initiate_checkout_' + Date.now() });
+                    }
+                  },
+                  
+                  // Track PlaceAnOrder
+                  trackPlaceAnOrder: function(items, totalValue) {
+                    if (typeof ttq === 'undefined') return;
+                    
+                    const pixel = this.getPixel();
+                    if (pixel) {
+                      const contents = items.map(item => ({
+                        content_id: item.id || item.slug || '',
+                        content_type: 'product',
+                        content_name: item.name || item.title || ''
+                      }));
+                      
+                      pixel.track('PlaceAnOrder', {
+                        contents: contents,
+                        value: totalValue || 0,
+                        currency: 'NGN'
+                      }, { event_id: 'place_order_' + Date.now() });
+                    }
+                  },
+                  
+                  // Track CompleteRegistration
+                  trackCompleteRegistration: function() {
+                    if (typeof ttq === 'undefined') return;
+                    
+                    const pixel = this.getPixel();
+                    if (pixel) {
+                      pixel.track('CompleteRegistration', {
+                        contents: [],
+                        value: 0,
+                        currency: 'NGN'
+                      }, { event_id: 'complete_registration_' + Date.now() });
+                    }
+                  },
+                  
+                  // Track Purchase
+                  trackPurchase: function(items, totalValue) {
+                    if (typeof ttq === 'undefined') return;
+                    
+                    const pixel = this.getPixel();
+                    if (pixel) {
+                      const contents = items.map(item => ({
+                        content_id: item.id || item.slug || '',
+                        content_type: 'product',
+                        content_name: item.name || item.title || ''
+                      }));
+                      
+                      pixel.track('Purchase', {
+                        contents: contents,
+                        value: totalValue || 0,
+                        currency: 'NGN'
+                      }, { event_id: 'purchase_' + Date.now() });
+                    }
                   }
-                  if (userData.external_id) {
-                    hashedData.external_id = await window.hashWithSHA256(userData.external_id);
-                  }
-                  
-                  ttq.identify(hashedData);
-                },
+                };
                 
-                // Track ViewContent
-                trackViewContent: function(product) {
-                  if (typeof ttq === 'undefined') return;
-                  
-                  ttq.track('ViewContent', {
-                    contents: [{
-                      content_id: product.id || product.slug || '',
-                      content_type: 'product',
-                      content_name: product.name || product.title || ''
-                    }],
-                    value: product.price_naira || product.price || 0,
-                    currency: 'NGN'
-                  }, { event_id: 'view_content_' + (product.id || product.slug || '') + '_' + Date.now() });
-                },
-                
-                // Track AddToCart
-                trackAddToCart: function(product) {
-                  if (typeof ttq === 'undefined') return;
-                  
-                  ttq.track('AddToCart', {
-                    contents: [{
-                      content_id: product.id || product.slug || '',
-                      content_type: 'product',
-                      content_name: product.name || product.title || ''
-                    }],
-                    value: product.price_naira || product.price || 0,
-                    currency: 'NGN'
-                  }, { event_id: 'add_to_cart_' + (product.id || product.slug || '') + '_' + Date.now() });
-                },
-                
-                // Track AddToWishlist
-                trackAddToWishlist: function(product) {
-                  if (typeof ttq === 'undefined') return;
-                  
-                  ttq.track('AddToWishlist', {
-                    contents: [{
-                      content_id: product.id || product.slug || '',
-                      content_type: 'product',
-                      content_name: product.name || product.title || ''
-                    }],
-                    value: product.price_naira || product.price || 0,
-                    currency: 'NGN'
-                  }, { event_id: 'add_to_wishlist_' + (product.id || product.slug || '') + '_' + Date.now() });
-                },
-                
-                // Track Search
-                trackSearch: function(searchQuery) {
-                  if (typeof ttq === 'undefined') return;
-                  
-                  ttq.track('Search', {
-                    contents: [],
-                    value: 0,
-                    currency: 'NGN',
-                    search_string: searchQuery || ''
-                  }, { event_id: 'search_' + Date.now() });
-                },
-                
-                // Track AddPaymentInfo
-                trackAddPaymentInfo: function(items, totalValue) {
-                  if (typeof ttq === 'undefined') return;
-                  
-                  const contents = items.map(item => ({
-                    content_id: item.id || item.slug || '',
-                    content_type: 'product',
-                    content_name: item.name || item.title || ''
-                  }));
-                  
-                  ttq.track('AddPaymentInfo', {
-                    contents: contents,
-                    value: totalValue || 0,
-                    currency: 'NGN'
-                  }, { event_id: 'add_payment_info_' + Date.now() });
-                },
-                
-                // Track InitiateCheckout
-                trackInitiateCheckout: function(items, totalValue) {
-                  if (typeof ttq === 'undefined') return;
-                  
-                  const contents = items.map(item => ({
-                    content_id: item.id || item.slug || '',
-                    content_type: 'product',
-                    content_name: item.name || item.title || ''
-                  }));
-                  
-                  ttq.track('InitiateCheckout', {
-                    contents: contents,
-                    value: totalValue || 0,
-                    currency: 'NGN'
-                  }, { event_id: 'initiate_checkout_' + Date.now() });
-                },
-                
-                // Track PlaceAnOrder
-                trackPlaceAnOrder: function(items, totalValue) {
-                  if (typeof ttq === 'undefined') return;
-                  
-                  const contents = items.map(item => ({
-                    content_id: item.id || item.slug || '',
-                    content_type: 'product',
-                    content_name: item.name || item.title || ''
-                  }));
-                  
-                  ttq.track('PlaceAnOrder', {
-                    contents: contents,
-                    value: totalValue || 0,
-                    currency: 'NGN'
-                  }, { event_id: 'place_order_' + Date.now() });
-                },
-                
-                // Track CompleteRegistration
-                trackCompleteRegistration: function() {
-                  if (typeof ttq === 'undefined') return;
-                  
-                  ttq.track('CompleteRegistration', {
-                    contents: [],
-                    value: 0,
-                    currency: 'NGN'
-                  }, { event_id: 'complete_registration_' + Date.now() });
-                },
-                
-                // Track Purchase
-                trackPurchase: function(items, totalValue) {
-                  if (typeof ttq === 'undefined') return;
-                  
-                  const contents = items.map(item => ({
-                    content_id: item.id || item.slug || '',
-                    content_type: 'product',
-                    content_name: item.name || item.title || ''
-                  }));
-                  
-                  ttq.track('Purchase', {
-                    contents: contents,
-                    value: totalValue || 0,
-                    currency: 'NGN'
-                  }, { event_id: 'purchase_' + Date.now() });
-                }
-              };
-              
-              console.log('TikTok tracking utilities initialized with pixel ID:', window.tiktokTrack.pixelId);
-            }, 500);
+                console.log('TikTok tracking utilities initialized with pixel ID:', window.tiktokTrack.pixelId);
+              }
+            }, 100);
           `}
         </Script>
       </head>
